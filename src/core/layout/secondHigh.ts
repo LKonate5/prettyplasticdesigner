@@ -1,4 +1,4 @@
-import type { Layout, LayoutMode, Pt, Tile } from '../types';
+import type { Layout, Pt, Tile } from '../types';
 
 /**
  * SECOND HIGH — square faceted tile, 294 × 294 mm, on a 300 mm grid
@@ -6,18 +6,19 @@ import type { Layout, LayoutMode, Pt, Tile } from '../types';
  * reads as a dark shadow joint over the wall background. No laps, no cuts —
  * the design comes from mixing per-tile rotations of the asymmetric facet
  * surface, so the renderer draws a rotatable facet motif on every tile.
+ *
+ * The plain grid is already exactly one seamless period, so patternRow/Col are
+ * just the grid indices and there are no wrap partners.
  */
 
 export const SH_PITCH = 300;
 const TILE = 294;
 const MARGIN = (SH_PITCH - TILE) / 2; // 3 mm each side
 
-export function layoutSecondHigh(rows: number, cols: number, _mode: LayoutMode): Layout {
-  // Wall and torus layouts are identical: the grid already tiles the plane.
+export function layoutSecondHigh(rows: number, cols: number): Layout {
   const wallW = cols * SH_PITCH;
   const wallH = rows * SH_PITCH;
   const tiles: Tile[] = [];
-  let cellIndex = 0;
 
   for (let row = 0; row < rows; row++) {
     const y = (rows - 1 - row) * SH_PITCH + MARGIN; // row 0 = bottom
@@ -30,9 +31,11 @@ export function layoutSecondHigh(rows: number, cols: number, _mode: LayoutMode):
         [x, y + TILE],
       ];
       tiles.push({
-        cellIndex: cellIndex++,
+        cellIndex: row * cols + col,
         row,
         col,
+        patternRow: row,
+        patternCol: col,
         polygon,
         clipped: null,
         exportPolygon: polygon,
@@ -50,7 +53,9 @@ export function layoutSecondHigh(rows: number, cols: number, _mode: LayoutMode):
     rows,
     cols,
     tiles,
-    cellCount: cellIndex,
+    cellCount: rows * cols,
+    patternRows: rows,
+    patternCols: cols,
     torusPeriod: { w: wallW, h: wallH },
   };
 }

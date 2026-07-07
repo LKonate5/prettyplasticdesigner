@@ -18,13 +18,19 @@ export function generatePattern(config: PatternConfig, layout: Layout): Cell[] {
   const list = allowed.length > 0 ? allowed : [MATERIALS[0].id];
   const allowedSet = new Set(list);
 
-  const maxRow = Math.max(1, ...layout.tiles.map((t) => t.row));
-  const maxCol = Math.max(1, ...layout.tiles.map((t) => t.col));
+  // Colour is keyed on the CANONICAL wrapped position (patternRow/patternCol),
+  // so wrap-partner tiles — which share a cellIndex — always compute the same
+  // value. Every partner writes cells[cellIndex] identically (idempotent), and
+  // the wall tiles seamlessly.
+  const maxRow = Math.max(1, layout.patternRows - 1);
+  const maxCol = Math.max(1, layout.patternCols - 1);
 
   const cells: Cell[] = new Array(layout.cellCount);
   for (const tile of layout.tiles) {
-    const rng = cellRng(config.seed, tile.row, tile.col);
-    let mat = baseMaterial(config, tile.row, tile.col, maxRow, maxCol, list, rng);
+    const pr = tile.patternRow;
+    const pc = tile.patternCol;
+    const rng = cellRng(config.seed, pr, pc);
+    let mat = baseMaterial(config, pr, pc, maxRow, maxCol, list, rng);
     if (config.type !== 'gradient') mat = applyToneVariation(mat, config, allowedSet, rng);
     const rotation: Rotation =
       config.randomRotation && layout.productId === 'second-high'

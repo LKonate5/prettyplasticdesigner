@@ -1,4 +1,4 @@
-import type { Layout, LayoutMode, Pt, Tile } from '../types';
+import type { Layout, Pt, Tile } from '../types';
 import { clipPolygonToRect, insetQuad, polygonsDiffer } from '../geometry';
 
 /**
@@ -12,10 +12,11 @@ import { clipPolygonToRect, insetQuad, polygonsDiffer } from '../geometry';
  * hidden ~104 mm head lap is rendered only as a shadow strip on each tile's
  * two upper edges.
  *
- * Wall mode: the user's `rows` counts full diamond rows. Two extra cut rows
- * (half-diamonds) fill the straight top and bottom edges, and offset rows get
- * an extra cut tile at each end — cut tiles count as full tiles in the
- * schedule, because installers cut them from full tiles.
+ * Tileability: the wall is a clean rectangle with cut half-diamonds at every
+ * edge. Each cut tile shares a cell with its wrap partner (the matching half on
+ * the opposite edge), so the whole wall is one seamless repeat. Requires an
+ * even row count so the offset/aligned row parity matches across the top/bottom
+ * wrap — the reducer snaps rows to even for this product.
  */
 
 export const FO_PITCH_X = 304;
@@ -32,70 +33,65 @@ function diamond(cx: number, cy: number): Pt[] {
   ];
 }
 
-/** Column x-centres for a row: offset parity alternates row by row. */
-function rowColumns(k: number, cols: number, torus: boolean): { count: number; cx: (c: number) => number } {
-  const odd = k % 2 === 1;
-  if (odd) {
-    // Row aligned on grid lines: ends are half-diamonds. In torus mode the
-    // right-end half is dropped — it is the same physical tile as c = 0,
-    // wrapped around.
-    return { count: torus ? cols : cols + 1, cx: (c) => c * FO_PITCH_X };
+/** Column x-centres for a diamond row: alternate rows are offset by half a tile. */
+function rowColumns(k: number, cols: number): { count: number; cx: (c: number) => number } {
+  if (k % 2 === 1) {
+    // Aligned on grid lines: ends are half-diamonds (c = 0 and c = cols).
+    return { count: cols + 1, cx: (c) => c * FO_PITCH_X };
   }
   return { count: cols, cx: (c) => c * FO_PITCH_X + HALF };
 }
 
-export function layoutFirstOne(rows: number, cols: number, mode: LayoutMode): Layout {
+const mod = (n: number, m: number): number => ((n % m) + m) % m;
+
+export function layoutFirstOne(rows: number, cols: number): Layout {
   const RP = FO_ROW_PITCH;
   const wallW = cols * FO_PITCH_X;
-  const torus = mode === 'torus';
+  // Wall height is an exact multiple of the row pitch so the top and bottom
+  // half-diamond rows have the same offset parity — that's what lets them merge
+  // (and share a colour) into whole diamonds when the wall is tiled vertically.
+  const wallH = rows * RP;
   const tiles: Tile[] = [];
-  let cellIndex = 0;
 
-  // Wall mode: diamond centres at cy = k·RP for k = 0..rows+1 (k = 0 is the
-  // top cut row, k = rows+1 the bottom cut row). Torus mode: rows even, no cut
-  // rows; row r (bottom-up) matches wall row r+1's parity so painted cells
-  // transfer 1:1 into the seamless export.
-  const kTop = torus ? 1 : 0;
-  const kBottom = torus ? rows : rows + 1;
-  const wallH = torus ? rows * RP : (rows + 1) * RP;
-  const yOffset = torus ? -RP : 0; // shift torus rows into [0, wallH)
-
-  for (let k = kBottom; k >= kTop; k--) {
-    const cy = k * RP + yOffset;
-    const { count, cx } = rowColumns(k, cols, torus);
-    const rowIdx = kBottom - k; // bottom-up
+  // Diamond centres at cy = k·RP for k = 0 (top half-row) .. rows (bottom
+  // half-row). Draw ascending row index (bottom first) so higher rows lap lower.
+  for (let k = rows; k >= 0; k--) {
+    const cy = k * RP;
+    const { count, cx } = rowColumns(k, cols);
+    const rowIdx = rows - k; // 0 = bottom
+    // Canonical wrapped row: k=0 (top) and k=rows (bottom) both map to 0, so
+    // the two half-rows share a cell and merge seamlessly across the wrap.
+    const patternRow = mod(k, rows);
     for (let c = 0; c < count; c++) {
       const polygon = diamond(cx(c), cy);
-      let clipped: Pt[] | null = null;
-      let cut = false;
-      if (!torus) {
-        const clip = clipPolygonToRect(polygon, 0, 0, wallW, wallH);
-        if (clip.length < 3) continue;
-        cut = polygonsDiffer(polygon, clip);
-        clipped = cut ? clip : null;
-      }
+      const clip = clipPolygonToRect(polygon, 0, 0, wallW, wallH);
+      if (clip.length < 3) continue;
+      const cut = polygonsDiffer(polygon, clip);
+      const patternCol = mod(c, cols); // c = cols aliases onto c = 0 (edge wrap)
+      // Every diamond is lapped by the row above it in the tessellated field
+      // (the top row's shadow lands on its clipped-away upper half, so it's
+      // harmless there and keeps the shadow tileable).
+      const centre: Pt = [cx(c), cy];
+      const left: Pt = [cx(c) - HALF, cy];
+      const top: Pt = [cx(c), cy - RP];
+      const right: Pt = [cx(c) + HALF, cy];
       const shadowStrips: Pt[][] = [];
-      if (torus || k > kTop) {
-        // A row above laps this tile: shade its two upper edges.
-        const centre: Pt = [cx(c), cy];
-        const left: Pt = [cx(c) - HALF, cy];
-        const top: Pt = [cx(c), cy - RP];
-        const right: Pt = [cx(c) + HALF, cy];
-        for (const quad of [
-          insetQuad(left, top, SHADOW_W, centre),
-          insetQuad(top, right, SHADOW_W, centre),
-        ]) {
-          const q = torus ? quad : clipPolygonToRect(quad, 0, 0, wallW, wallH);
-          if (q.length >= 3) shadowStrips.push(q);
-        }
+      for (const quad of [
+        insetQuad(left, top, SHADOW_W, centre),
+        insetQuad(top, right, SHADOW_W, centre),
+      ]) {
+        const q = clipPolygonToRect(quad, 0, 0, wallW, wallH);
+        if (q.length >= 3) shadowStrips.push(q);
       }
       tiles.push({
-        cellIndex: cellIndex++,
+        cellIndex: patternRow * cols + patternCol,
         row: rowIdx,
         col: c,
+        patternRow,
+        patternCol,
         polygon,
-        clipped,
-        exportPolygon: clipped ?? polygon,
+        clipped: cut ? clip : null,
+        exportPolygon: cut ? clip : polygon,
         zIndex: rowIdx,
         cut,
         shadowStrips,
@@ -110,7 +106,9 @@ export function layoutFirstOne(rows: number, cols: number, mode: LayoutMode): La
     rows,
     cols,
     tiles,
-    cellCount: cellIndex,
-    torusPeriod: rows % 2 === 0 ? { w: cols * FO_PITCH_X, h: rows * RP } : null,
+    cellCount: rows * cols,
+    patternRows: rows,
+    patternCols: cols,
+    torusPeriod: rows % 2 === 0 ? { w: wallW, h: wallH } : null,
   };
 }

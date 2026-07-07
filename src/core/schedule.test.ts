@@ -7,7 +7,7 @@ import type { Cell } from './types';
 
 describe('schedule', () => {
   it('10×10 Second High: 9 m², 100 tiles, 120 kg (hand-checked)', () => {
-    const layout = layoutSecondHigh(10, 10, 'wall');
+    const layout = layoutSecondHigh(10, 10);
     const cells: Cell[] = layout.tiles.map((t) => ({
       material: t.cellIndex % 2 === 0 ? 0 : 7,
       rotation: 0,

@@ -27,9 +27,16 @@ export function computeSchedule(
   layout: Layout,
   cells: readonly Cell[],
 ): Schedule {
+  // Count PHYSICAL tiles placed on the wall (each cut edge tile counts as a
+  // full tile, since it's cut from one), not the shared logical cells — this
+  // is the orderable quantity. Wrap partners share a colour but are separate
+  // physical tiles.
   const counts = new Array<number>(MATERIALS.length).fill(0);
-  for (const cell of cells) counts[cell.material]++;
-  const totalTiles = cells.length;
+  for (const tile of layout.tiles) {
+    const cell = cells[tile.cellIndex];
+    if (cell) counts[cell.material]++;
+  }
+  const totalTiles = layout.tiles.length;
   const areaM2 = (layout.wallW * layout.wallH) / 1_000_000;
   const rows: ScheduleRow[] = [];
   counts.forEach((count, i) => {

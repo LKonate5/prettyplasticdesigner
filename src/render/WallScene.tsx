@@ -13,10 +13,8 @@ import { TileShape } from './TileShape';
  * Coordinates are real-world mm (1 SVG unit = 1 mm); width/height props set
  * the presentation size.
  *
- * `repeat` (seamless export only): draw the tile layer at a 3×3 grid of
- * ±period offsets so tiles straddling an edge reappear on the opposite side —
- * the crop is then perfectly tileable in geometry AND colour. defs and the
- * background are drawn once.
+ * The wall is tileable by construction (wrap-partner tiles share a colour), so
+ * the seamless texture export just renders this scene and crops to one period.
  */
 
 export const WALL_BG = '#26282b'; // literal (not a CSS var) so exports carry it
@@ -28,41 +26,9 @@ interface WallSceneProps {
   textures: TextureMap;
   width?: string | number;
   height?: string | number;
-  repeat?: { w: number; h: number };
 }
 
-export function WallScene({
-  layout,
-  cells,
-  product,
-  textures,
-  width,
-  height,
-  repeat,
-}: WallSceneProps) {
-  const tiles = (
-    <g>
-      {layout.tiles.map((tile) => {
-        const cell = cells[tile.cellIndex];
-        const material = materialAt(cell?.material ?? 0);
-        return (
-          <TileShape
-            key={tile.cellIndex}
-            tile={tile}
-            material={material}
-            rotation={cell?.rotation ?? 0}
-            texUrl={textures.get(textureKey(product.id, material.id)) ?? null}
-            productId={product.id}
-          />
-        );
-      })}
-    </g>
-  );
-
-  const offsets = repeat
-    ? [-1, 0, 1].flatMap((iy) => [-1, 0, 1].map((ix) => [ix * repeat.w, iy * repeat.h] as const))
-    : [[0, 0] as const];
-
+export function WallScene({ layout, cells, product, textures, width, height }: WallSceneProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -73,15 +39,22 @@ export function WallScene({
     >
       <SceneDefs product={product} layout={layout} textures={textures} />
       <rect x={0} y={0} width={layout.wallW} height={layout.wallH} fill={WALL_BG} />
-      {offsets.map(([dx, dy], i) =>
-        dx === 0 && dy === 0 ? (
-          <g key={i}>{tiles}</g>
-        ) : (
-          <g key={i} transform={`translate(${dx} ${dy})`}>
-            {tiles}
-          </g>
-        ),
-      )}
+      {layout.tiles.map((tile, i) => {
+        const cell = cells[tile.cellIndex];
+        const material = materialAt(cell?.material ?? 0);
+        return (
+          // key is the physical tile slot (i): wrap partners share cellIndex, so
+          // cellIndex is NOT unique per tile and can't be the key.
+          <TileShape
+            key={i}
+            tile={tile}
+            material={material}
+            rotation={cell?.rotation ?? 0}
+            texUrl={textures.get(textureKey(product.id, material.id)) ?? null}
+            productId={product.id}
+          />
+        );
+      })}
     </svg>
   );
 }

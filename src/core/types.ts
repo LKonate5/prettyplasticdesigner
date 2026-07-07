@@ -54,6 +54,15 @@ export interface Tile {
   cellIndex: number; // index into the design's cells array
   row: number; // bottom-up row index (0 = bottom row)
   col: number;
+  /**
+   * Canonical wrapped lattice position. Wrap partners — a half-tile at one
+   * edge and its match at the opposite edge — share the same (patternRow,
+   * patternCol), hence the same cellIndex, hence the same colour. This is what
+   * makes the wall a seamless repeating unit under both auto-generation and
+   * hand-painting.
+   */
+  patternRow: number;
+  patternCol: number;
   polygon: Pt[];
   clipped: Pt[] | null; // polygon ∩ wall rect, only when it differs from polygon
   exportPolygon: Pt[];
@@ -62,8 +71,6 @@ export interface Tile {
   shadowStrips: Pt[][]; // translucent lap-shadow quads drawn over the tile fill
 }
 
-export type LayoutMode = 'wall' | 'torus';
-
 export interface Layout {
   productId: ProductId;
   wallW: number; // mm
@@ -71,12 +78,15 @@ export interface Layout {
   rows: number; // as requested by the user
   cols: number;
   tiles: Tile[]; // sorted ascending zIndex = safe draw order
-  cellCount: number; // === tiles.length
+  /** Distinct logical tiles = patternRows × patternCols (wrap partners collapse to one). */
+  cellCount: number;
+  patternRows: number;
+  patternCols: number;
   /**
-   * Size of one seamless repeat, or null when the current settings cannot
-   * wrap (odd row count on offset patterns). 'torus' mode layouts position
-   * tiles inside this period without wall clipping; the seamless exporter
-   * replicates them 3×3 so edge tiles wrap in geometry AND colour.
+   * Size of one seamless repeat (= wall size, since the wall now tiles by
+   * construction), or null when the settings can't tile cleanly (odd row count
+   * on an offset product). The seamless texture export renders the wall and
+   * crops to this period.
    */
   torusPeriod: { w: number; h: number } | null;
 }

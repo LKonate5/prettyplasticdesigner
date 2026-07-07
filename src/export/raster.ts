@@ -1,6 +1,3 @@
-import { computeLayout, mapCellsToTorus } from '../core/layout';
-import { generatePattern } from '../core/pattern/generators';
-import type { Cell, Layout } from '../core/types';
 import { downloadBlob } from './download';
 import { buildSceneSvg, type SceneInput } from './svg';
 
@@ -103,36 +100,24 @@ export interface SeamlessOutcome {
 }
 
 /**
- * Seamless / tileable PNG. Uses the product's torus layout (one exact repeat)
- * and the 3×3 wrap in WallScene so edge-straddling tiles reappear on the
- * opposite side — the crop tiles perfectly in geometry and colour. Returns a
- * reason (not a throw) when the current settings can't wrap (e.g. odd rows on
- * an offset bond).
+ * Seamless / tileable PNG. The wall is now tileable by construction — wrap
+ * partner tiles share a colour, so a half-tile at one edge matches its partner
+ * at the opposite edge. So we just render the wall and crop to one period (=
+ * the wall size). `torusPeriod` is null when the settings can't tile cleanly
+ * (odd rows on an offset bond), in which case we return a reason rather than a
+ * misleading image.
  */
 export async function exportSeamless(
   scene: SceneInput,
   pxPerMm: number,
   filename: string,
 ): Promise<SeamlessOutcome> {
-  const { product, layout, cells, options } = scene;
-  const period = layout.torusPeriod;
+  const period = scene.layout.torusPeriod;
   if (!period) {
     return { ok: false, reason: 'This layout can’t tile seamlessly — use an even row count.' };
   }
-  const torusLayout: Layout = computeLayout(product, layout.rows, layout.cols, options, 'torus');
-  // Carry the on-screen colours onto the torus tiles by position; if a mapping
-  // gap appears, regenerate deterministically from the same seed/pattern.
-  const mapped: Cell[] = mapCellsToTorus(layout, torusLayout, cells);
-  const torusCells =
-    mapped.length === torusLayout.cellCount && mapped.every(Boolean)
-      ? mapped
-      : generatePattern(scene.pattern, torusLayout);
-
   const { pxW, pxH, clamped } = clampScale(period.w, period.h, pxPerMm);
-  const svg = await buildSceneSvg(
-    { ...scene, layout: torusLayout, cells: torusCells },
-    { repeat: period, mm: false },
-  );
+  const svg = await buildSceneSvg(scene, { mm: false });
   const canvas = await svgToCanvas(svg, pxW, pxH);
   const blob = await canvasToBlob(canvas, 'image/png');
   downloadBlob(blob, filename);

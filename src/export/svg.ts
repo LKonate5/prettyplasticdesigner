@@ -44,7 +44,7 @@ export function usedMaterialIds(cells: readonly Cell[]): MaterialId[] {
  */
 export async function buildSceneSvg(
   { product, layout, cells, textures }: SceneInput,
-  opts: { repeat?: { w: number; h: number }; mm?: boolean } = {},
+  opts: { mm?: boolean } = {},
 ): Promise<string> {
   const dataUrls = await texturesAsDataUrls(textures, product.id, usedMaterialIds(cells));
   const inlineTextures: TextureMap = dataUrls;
@@ -58,7 +58,6 @@ export async function buildSceneSvg(
       textures: inlineTextures,
       width: mm ? `${round(layout.wallW)}mm` : undefined,
       height: mm ? `${round(layout.wallH)}mm` : undefined,
-      repeat: opts.repeat,
     }),
   );
   return `<?xml version="1.0" encoding="UTF-8"?>\n${body}`;

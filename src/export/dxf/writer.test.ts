@@ -46,9 +46,10 @@ describe('DXF writer (AC1015)', () => {
   it('emits one closed LWPOLYLINE per tile plus the wall outline', () => {
     const { dxf, layout } = dxfFor('first-one');
     const polys = (dxf.match(/\r\nLWPOLYLINE\r\n/g) ?? []).length;
-    expect(polys).toBe(layout.cellCount + 1); // tiles + boundary (First One has no facets)
+    // one polyline per PHYSICAL tile (incl. cut edges) + the wall boundary
+    expect(polys).toBe(layout.tiles.length + 1);
     // every polyline is flagged closed (70 → 1)
-    expect((dxf.match(/\r\n70\r\n1\r\n/g) ?? []).length).toBeGreaterThanOrEqual(layout.cellCount);
+    expect((dxf.match(/\r\n70\r\n1\r\n/g) ?? []).length).toBeGreaterThanOrEqual(layout.tiles.length);
   });
 
   it('creates a layer per used material and nothing for unused ones', () => {

@@ -55,8 +55,19 @@ const GRID_MAX = 80;
 export const DEFAULT_GRID: Record<ProductId, { rows: number; cols: number }> = {
   'first-one': { rows: 20, cols: 10 }, // ≈ 3.0 × 3.1 m
   'second-high': { rows: 10, cols: 10 }, // 3 × 3 m
-  'basic-third': { rows: 7, cols: 9 }, // ≈ 3.0 × 3.3 m
+  'basic-third': { rows: 8, cols: 9 }, // ≈ 3.6 × 3.0 m (even rows → staggered tiles seamlessly)
 };
+
+/**
+ * Offset products (First One always; Basic Third when staggered) only tile
+ * cleanly top-to-bottom with an even row count, so snap rows to even. Keeps the
+ * wall a true seamless repeat without the user having to think about it.
+ */
+export function snapRows(productId: ProductId, options: ProductOptions, rows: number): number {
+  const offset = productId === 'first-one' || (productId === 'basic-third' && options.bond === 'staggered');
+  if (!offset || rows % 2 === 0) return rows;
+  return Math.max(2, rows + 1);
+}
 
 export function defaultPattern(seed: number): PatternConfig {
   return {
@@ -79,9 +90,17 @@ function buildDesign(
   pattern: PatternConfig,
 ): DesignState | null {
   const product = PRODUCTS[productId];
-  const layout = computeLayout(product, rows, cols, options);
-  if (layout.cellCount > product.maxTiles) return null;
-  return { productId, rows, cols, options, pattern, cells: generatePattern(pattern, layout) };
+  const snappedRows = snapRows(productId, options, rows);
+  const layout = computeLayout(product, snappedRows, cols, options);
+  if (layout.tiles.length > product.maxTiles) return null;
+  return {
+    productId,
+    rows: snappedRows,
+    cols,
+    options,
+    pattern,
+    cells: generatePattern(pattern, layout),
+  };
 }
 
 export function initialDesign(productId: ProductId, seed: number): DesignState {

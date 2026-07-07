@@ -1,4 +1,4 @@
-import type { Layout, LayoutMode, ProductOptions, Pt, Tile } from '../types';
+import type { Layout, ProductOptions, Pt, Tile } from '../types';
 import { clipPolygonToRect, polygonsDiffer } from '../geometry';
 
 /**
@@ -8,6 +8,12 @@ import { clipPolygonToRect, polygonsDiffer } from '../geometry';
  * ~6.7 tiles/m². Higher courses lap the lower ones; the top course shows its
  * full 569 mm. Bond is stacked (aligned columns) or staggered (half-tile
  * offset, cut halves at the wall ends).
+ *
+ * Tileability: staggered offset rows put a cut half-tile at each end; each
+ * shares a cell with its opposite-end partner so the wall repeats horizontally.
+ * (Vertically the pattern colour repeats by course; the full top course is kept
+ * for a realistic wall, so vertical tiling isn't pixel-seamless — the
+ * meaningful cladding repeat is horizontal.)
  */
 
 export const BT_W = 329;
@@ -15,28 +21,22 @@ export const BT_H = 569;
 const STAGGER = BT_W / 2;
 const SHADOW_H = 8;
 
-export function layoutBasicThird(
-  rows: number,
-  cols: number,
-  options: ProductOptions,
-  mode: LayoutMode,
-): Layout {
+const mod = (n: number, m: number): number => ((n % m) + m) % m;
+
+export function layoutBasicThird(rows: number, cols: number, options: ProductOptions): Layout {
   const e = options.exposure;
   const staggered = options.bond === 'staggered';
-  const torus = mode === 'torus';
   const wallW = cols * BT_W;
-  const wallH = torus ? rows * e : BT_H + (rows - 1) * e;
+  const wallH = BT_H + (rows - 1) * e;
   const tiles: Tile[] = [];
-  let cellIndex = 0;
 
   for (let row = 0; row < rows; row++) {
     // row 0 = bottom course. Draw ascending so higher courses lap lower ones.
     const yTop = wallH - BT_H - row * e;
     const offsetRow = staggered && row % 2 === 1;
-    // Staggered offset rows: wall mode places cols+1 tiles (cut halves at both
-    // ends); torus mode places cols, with c = 0 straddling the wrap seam.
-    const count = offsetRow && !torus ? cols + 1 : cols;
-    const lapped = torus || row < rows - 1; // a course above laps this one
+    // Staggered offset rows place cols+1 tiles (cut halves at both ends).
+    const count = offsetRow ? cols + 1 : cols;
+    const lapped = row < rows - 1; // a course above laps this one
     for (let c = 0; c < count; c++) {
       const x = offsetRow ? c * BT_W - STAGGER : c * BT_W;
       const polygon: Pt[] = [
@@ -45,14 +45,9 @@ export function layoutBasicThird(
         [x + BT_W, yTop + BT_H],
         [x, yTop + BT_H],
       ];
-      let clipped: Pt[] | null = null;
-      let cut = false;
-      if (!torus) {
-        const clip = clipPolygonToRect(polygon, 0, 0, wallW, wallH);
-        if (clip.length < 3) continue;
-        cut = polygonsDiffer(polygon, clip);
-        clipped = cut ? clip : null;
-      }
+      const clip = clipPolygonToRect(polygon, 0, 0, wallW, wallH);
+      if (clip.length < 3) continue;
+      const cut = polygonsDiffer(polygon, clip);
       // Visible footprint: the bottom `exposure` mm when lapped, else full tile.
       const visTop = lapped ? yTop + BT_H - e : yTop;
       const visible: Pt[] = [
@@ -61,7 +56,7 @@ export function layoutBasicThird(
         [x + BT_W, yTop + BT_H],
         [x, yTop + BT_H],
       ];
-      const exportPolygon = torus ? visible : clipPolygonToRect(visible, 0, 0, wallW, wallH);
+      const exportPolygon = clipPolygonToRect(visible, 0, 0, wallW, wallH);
       const shadowStrips: Pt[][] = [];
       if (lapped) {
         const strip: Pt[] = [
@@ -70,15 +65,18 @@ export function layoutBasicThird(
           [x + BT_W, visTop + SHADOW_H],
           [x, visTop + SHADOW_H],
         ];
-        const q = torus ? strip : clipPolygonToRect(strip, 0, 0, wallW, wallH);
+        const q = clipPolygonToRect(strip, 0, 0, wallW, wallH);
         if (q.length >= 3) shadowStrips.push(q);
       }
+      const patternCol = mod(c, cols); // c = cols aliases onto c = 0 (edge wrap)
       tiles.push({
-        cellIndex: cellIndex++,
+        cellIndex: row * cols + patternCol,
         row,
         col: c,
+        patternRow: row,
+        patternCol,
         polygon,
-        clipped,
+        clipped: cut ? clip : null,
         exportPolygon,
         zIndex: row,
         cut,
@@ -95,7 +93,9 @@ export function layoutBasicThird(
     rows,
     cols,
     tiles,
-    cellCount: cellIndex,
-    torusPeriod: canWrap ? { w: wallW, h: rows * e } : null,
+    cellCount: rows * cols,
+    patternRows: rows,
+    patternCols: cols,
+    torusPeriod: canWrap ? { w: wallW, h: wallH } : null,
   };
 }
