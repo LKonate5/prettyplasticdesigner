@@ -1,0 +1,36 @@
+<!doctype html>
+<!--
+  Local embed simulation — mirrors the exact Squarespace snippet in README.md,
+  including the optional auto-height listener. Easiest way to try it:
+    npm run dev
+  then open  http://localhost:5173/embed-test.html
+  The iframe below loads ./index.html (the app) exactly as a Squarespace Code
+  Block would, and the auto-height listener resizes the frame to fit.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Embed test — Pretty Plastic Facade Designer</title>
+    <style>
+      body { font-family: sans-serif; margin: 0; background: #f4f2ee; }
+      header { padding: 16px 20px; background: #fff; border-bottom: 1px solid #ddd; }
+      .frame-wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+      iframe { width: 100%; height: 820px; border: 1px solid #ccc; border-radius: 8px; background:#fff; }
+    </style>
+  </head>
+  <body>
+    <header><strong>Host page</strong> — this is what a Squarespace page around the embed looks like.</header>
+    <div class="frame-wrap">
+      <iframe id="pp-designer" src="./index.html" title="Pretty Plastic Facade Designer" loading="lazy"></iframe>
+    </div>
+    <script>
+      window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'pp-designer:height') {
+          var f = document.getElementById('pp-designer');
+          if (f) f.style.height = e.data.height + 'px';
+        }
+      });
+    </script>
+  </body>
+</html>

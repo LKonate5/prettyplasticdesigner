@@ -1,0 +1,160 @@
+# Pretty Plastic Facade Designer
+
+A self-contained web tool for designing walls of Pretty Plastic recycled-PVC
+cladding tiles. Pick a product, set the wall size, auto-generate or hand-paint
+a colour pattern from the 12-material palette, read off a tile schedule, and
+export in the formats architects use (PNG, JPEG, SVG, seamless texture, DXF,
+PDF spec sheet).
+
+It's a **static front-end app** — no server, no database. It runs entirely in
+the browser, so you can host it anywhere static and drop it into Squarespace
+with an iframe (a small embedded window).
+
+---
+
+## The three products
+
+| Product | Tile (mm) | Coverage | Notes |
+|---|---|---|---|
+| **First One** | 304 × 400 × 29 | 22.2 /m² | Diamond, overlapping fish-scale rows |
+| **Second High** | 294 × 294 × 67 | 11.1 /m² | Square faceted; per-tile rotation is the design |
+| **Basic Third** | 329 × 569 × 30 | 6.7 /m² | Rectangle, 3 relief bands; adjustable course exposure + bond |
+
+Palette (all products): **ochre, terracotta, green, grey** × **light, medium,
+dark** = 12 materials.
+
+---
+
+## Run it locally
+
+You need [Node.js](https://nodejs.org) 18+ installed. Then, in this folder:
+
+```bash
+npm install      # one time — downloads the libraries it needs
+npm run dev      # starts a local preview at http://localhost:5173
+```
+
+Open the printed URL in your browser. Edits to the code refresh instantly.
+
+```bash
+npm test         # run the maths/geometry tests (should say "43 passed")
+```
+
+## Build the static bundle (to host it)
+
+```bash
+npm run build    # writes a ready-to-host site into the dist/ folder
+npm run preview  # optional: preview that built site locally
+```
+
+Everything the tool needs is inside **`dist/`** after this. Upload that
+folder's contents to any static host — Netlify, Vercel, GitHub Pages, Cloudflare
+Pages, or even a plain web-server folder. You'll get a public URL like
+`https://pretty-plastic-designer.netlify.app/`.
+
+> The build uses relative asset paths (`base: './'`), so it works no matter what
+> sub-path it ends up hosted under.
+
+---
+
+## Embed it in Squarespace
+
+1. Host the built site (previous step) and copy its public URL.
+2. In Squarespace, edit the page → **Add Block → Code**.
+3. Paste this, replacing the URL with yours:
+
+```html
+<iframe
+  src="https://YOUR-HOSTED-URL/"
+  title="Pretty Plastic Facade Designer"
+  style="width:100%; height:820px; border:0;"
+  loading="lazy"
+></iframe>
+```
+
+That's it — a fixed 820 px height works well on desktop and the panel collapses
+to a menu button on narrow screens.
+
+### Optional: auto-resize the iframe to its content
+
+The app posts its height to the parent page. If you want the iframe to grow/
+shrink to fit (no inner scrollbar), add this **below** the iframe in the same
+Code block, and give the iframe an `id="pp-designer"`:
+
+```html
+<script>
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'pp-designer:height') {
+      var f = document.getElementById('pp-designer');
+      if (f) f.style.height = e.data.height + 'px';
+    }
+  });
+</script>
+```
+
+---
+
+## Drop in the real tile textures (later)
+
+Right now tiles use flat placeholder colours. To use real photographed tile
+textures, drop PNG files into `public/textures/` using this naming:
+
+```
+public/textures/first-one/ochre-light.png
+public/textures/first-one/ochre-medium.png
+...
+public/textures/second-high/green-dark.png
+public/textures/basic-third/grey-medium.png
+```
+
+Pattern: `public/textures/{product}/{colour}-{shade}.png`
+(`{product}` = `first-one` | `second-high` | `basic-third`).
+
+No code changes needed — the app checks for each file at startup and uses it if
+present, falling back to the placeholder colour if not. Add as few or as many as
+you like. Then rebuild (`npm run build`).
+
+To change the brand colours/fonts of the **interface** (not the tiles), edit the
+handful of values at the top of `src/styles/theme.css`.
+
+---
+
+## Exports — what's real vs. interchange
+
+Everything below is generated **in your browser**, client-side:
+
+| Format | What it is |
+|---|---|
+| **PNG / JPEG** | A picture of the rendered wall (JPEG has a white background). |
+| **SVG** | Scalable vector of the layout, at true 1:1 mm size. |
+| **Seamless texture (PNG)** | A tileable image — one repeat of the pattern that wraps edge-to-edge, for 3D/render tools. Needs an even row count for offset patterns. |
+| **DXF (2D)** | The industry CAD interchange file. Millimetre units, one layer per colour. Opens in **AutoCAD, Revit, and SketchUp**. |
+| **PDF spec sheet** | One A4 page: the render + a tile schedule (count/% /m²/weight per colour) for quoting. |
+
+**SketchUp (.skp) and Revit (.rvt/.rfa)** are proprietary formats that can't be
+written from a browser — no tool can. The correct path is to **import the DXF**
+(2D) into them, which they all do cleanly. A 3D export (OBJ / glTF) that opens
+directly in SketchUp is planned for phase 2 — the code is stubbed at
+`src/export/mesh.ts`.
+
+---
+
+## How the code is organised
+
+```
+src/
+  core/        Pure logic, no UI — fully unit-tested
+    layout/    Tile geometry per product (the single source of truth)
+    pattern/   Seeded pattern generators
+    state/     Undo/redo reducer
+    schedule.ts, geometry.ts, types.ts
+  render/      SVG scene (used on screen AND by every export)
+  components/  The control panel + preview UI
+  export/      SVG, PNG/JPEG, seamless, DXF, PDF (each lazy-loaded)
+  data/        Product specs + palette (edit these to add products/colours)
+  strings.ts   All interface text (one place → easy to translate later)
+```
+
+**Adding a product** = add a spec in `data/products.ts` + a layout module in
+`core/layout/`. **Adding a colour** = add a row in `data/palette.ts`. The core
+logic doesn't need touching.
