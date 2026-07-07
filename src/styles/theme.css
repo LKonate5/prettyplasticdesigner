@@ -1,0 +1,16 @@
+/*
+ * Single rebrand point: swap these values (and the font) when Pretty Plastic
+ * supplies brand assets. Nothing else in the app hard-codes UI colours.
+ */
+:root {
+  --pp-bg: #eeece8;
+  --pp-panel: #ffffff;
+  --pp-ink: #1c1c1e;
+  --pp-muted: #6f6d68;
+  --pp-border: #dedbd4;
+  --pp-accent: #cf5b2e;
+  --pp-accent-ink: #ffffff;
+  --pp-wall-bg: #26282b;
+  --pp-radius: 6px;
+  --pp-font: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}

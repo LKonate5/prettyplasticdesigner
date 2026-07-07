@@ -1,0 +1,158 @@
+import type { MaterialId, PatternConfig, PatternType, ProductSpec } from '../core/types';
+import { MATERIALS } from '../data/palette';
+import { STR } from '../strings';
+
+const TYPE_LABELS: Record<PatternType, string> = {
+  solid: STR.patternSolid,
+  random: STR.patternRandom,
+  gradient: STR.patternGradient,
+  stripes: STR.patternStripes,
+  checker: STR.patternChecker,
+};
+
+/**
+ * Pattern generator controls: type, per-type options, tone-variation slider,
+ * seed field + shuffle, and (Second High only) random-rotation toggle.
+ */
+export function PatternControls({
+  product,
+  pattern,
+  onPattern,
+  onReroll,
+}: {
+  product: ProductSpec;
+  pattern: PatternConfig;
+  onPattern: (next: Partial<PatternConfig>) => void;
+  onReroll: () => void;
+}) {
+  const allowedList = MATERIALS.filter((m) => pattern.allowedMaterials.includes(m.id));
+  return (
+    <div className="section">
+      <h2>{STR.pattern}</h2>
+
+      <div className="field">
+        <select
+          value={pattern.type}
+          onChange={(e) => onPattern({ type: e.target.value as PatternType })}
+        >
+          {(Object.keys(TYPE_LABELS) as PatternType[]).map((t) => (
+            <option key={t} value={t}>
+              {TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {pattern.type === 'solid' && (
+        <div className="field">
+          <label>{STR.baseColour}</label>
+          <select
+            value={pattern.solidMaterial}
+            onChange={(e) => onPattern({ solidMaterial: e.target.value as MaterialId })}
+          >
+            {(allowedList.length ? allowedList : MATERIALS).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {pattern.type === 'gradient' && (
+        <div className="field">
+          <label>{STR.direction}</label>
+          <select
+            value={pattern.gradient.direction}
+            onChange={(e) =>
+              onPattern({
+                gradient: { direction: e.target.value as PatternConfig['gradient']['direction'] },
+              })
+            }
+          >
+            <option value="horizontal">{STR.horizontal}</option>
+            <option value="vertical">{STR.vertical}</option>
+            <option value="diagonal">{STR.diagonal}</option>
+          </select>
+        </div>
+      )}
+
+      {pattern.type === 'stripes' && (
+        <>
+          <div className="field">
+            <label>{STR.direction}</label>
+            <select
+              value={pattern.stripes.direction}
+              onChange={(e) =>
+                onPattern({
+                  stripes: {
+                    ...pattern.stripes,
+                    direction: e.target.value as 'horizontal' | 'vertical',
+                  },
+                })
+              }
+            >
+              <option value="horizontal">{STR.horizontal}</option>
+              <option value="vertical">{STR.vertical}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>
+              {STR.stripeWidth}: {pattern.stripes.width}
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={8}
+              value={pattern.stripes.width}
+              onChange={(e) =>
+                onPattern({ stripes: { ...pattern.stripes, width: Number(e.target.value) } })
+              }
+            />
+          </div>
+        </>
+      )}
+
+      <div className="field">
+        <label>
+          {STR.toneVariation}: {Math.round(pattern.toneVariation * 100)}%
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={pattern.toneVariation}
+          onChange={(e) => onPattern({ toneVariation: Number(e.target.value) })}
+        />
+      </div>
+
+      {product.supportsRotation && (
+        <label className="check field">
+          <input
+            type="checkbox"
+            checked={pattern.randomRotation}
+            onChange={(e) => onPattern({ randomRotation: e.target.checked })}
+          />
+          {STR.randomRotation}
+        </label>
+      )}
+
+      <div className="field">
+        <label htmlFor="seed">{STR.seed}</label>
+        <div className="row">
+          <input
+            id="seed"
+            type="number"
+            value={pattern.seed}
+            onChange={(e) => onPattern({ seed: Number(e.target.value) >>> 0 })}
+          />
+          <button className="btn primary" style={{ flex: 'none' }} onClick={onReroll}>
+            ⟳ {STR.reroll}
+          </button>
+        </div>
+        <p className="note">{STR.seedHint}</p>
+      </div>
+    </div>
+  );
+}
