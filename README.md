@@ -1,10 +1,11 @@
 # Pretty Plastic Facade Designer
 
 A self-contained web tool for designing walls of Pretty Plastic recycled-PVC
-cladding tiles. Pick a product, set the wall size, auto-generate or hand-paint
-a colour pattern from the 12-material palette, read off a tile schedule, and
-export in the formats architects use (PNG, JPEG, SVG, seamless texture, DXF,
-PDF spec sheet).
+cladding tiles. Pick a product, set the wall size (in metres or rows×columns),
+auto-generate or hand-paint a **seamlessly-tileable** colour pattern from the
+12-material palette, choose a joint colour, read off a tile schedule and
+order-ready quantities, then export (PNG, JPEG, SVG, seamless texture, DXF, PDF,
+3D GLB/OBJ), share a link, or email Pretty Plastic for a sample or a quote.
 
 It's a **static front-end app** — no server, no database. It runs entirely in
 the browser, so you can host it anywhere static and drop it into Squarespace
@@ -116,6 +117,17 @@ you like. Then rebuild (`npm run build`).
 
 To change the brand colours/fonts of the **interface** (not the tiles), edit the
 handful of values at the top of `src/styles/theme.css`.
+
+## Configuration (`src/config.ts`)
+
+- **`SALES_EMAIL`** — where the "Request a sample" and "Request a quote" buttons
+  address their email. Defaults to `info@prettyplastic.nl`; change it to your
+  sales inbox if needed. (The buttons open the visitor's own email app with the
+  message pre-filled — the quote button also downloads the wall image to attach,
+  since emails can't carry an attachment by themselves.)
+- **`JOINT_COLOURS`** — the preset grout/joint colours in the picker.
+- **Tiles per box** is entered by the user in the Order panel (it's not baked in,
+  because packaging can change) — set a default there if you prefer.
 
 ---
 
