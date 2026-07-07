@@ -100,7 +100,17 @@ export function ControlPanel({
 
       <SchedulePanel schedule={schedule} product={product} />
 
-      <ExportMenu ctx={{ product, layout, cells: design.cells, textures }} />
+      <ExportMenu
+        ctx={{
+          product,
+          layout,
+          cells: design.cells,
+          textures,
+          options: design.options,
+          pattern: design.pattern,
+          schedule,
+        }}
+      />
 
       <p className="note">{STR.regenNote}</p>
     </aside>
