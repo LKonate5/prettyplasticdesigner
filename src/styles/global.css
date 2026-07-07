@@ -191,16 +191,78 @@ input[type='checkbox'] {
   cursor: default;
 }
 
-/* palette swatches */
-.swatches {
+/* preset "quick looks" */
+.presets {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.preset {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--pp-border);
+  border-radius: var(--pp-radius);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.preset:hover {
+  border-color: var(--pp-ink);
+}
+
+.preset-chips {
+  display: inline-flex;
+  flex: none;
+}
+
+.preset-chip {
+  width: 11px;
+  height: 14px;
+  margin-left: -3px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.preset-chip:first-child {
+  margin-left: 0;
+}
+
+/* palette — labelled grid: colour rows × shade columns */
+.palette-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, 1fr);
+  gap: 5px;
+  align-items: center;
+}
+
+.palette-grid .corner {
+  content: '';
+}
+
+.palette-grid .shade-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pp-muted);
+  text-align: center;
+}
+
+.palette-grid .colour-label {
+  font-size: 12px;
+  color: var(--pp-ink);
+  padding-right: 6px;
+  white-space: nowrap;
 }
 
 .swatch {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 1.4;
   border-radius: 4px;
   border: 2px solid transparent;
   cursor: pointer;

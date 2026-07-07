@@ -111,9 +111,14 @@ export function initialDesign(productId: ProductId, seed: number): DesignState {
 }
 
 export function initialAppState(seed: number): AppState {
+  return appStateFromDesign(initialDesign('first-one', seed));
+}
+
+/** Build a fresh app state around a given design (e.g. one loaded from a share link). */
+export function appStateFromDesign(present: DesignState): AppState {
   return {
     past: [],
-    present: initialDesign('first-one', seed),
+    present,
     future: [],
     strokeBase: null,
     lastCommitKind: null,

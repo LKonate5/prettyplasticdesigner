@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import type { MaterialId, PatternConfig, PatternType, ProductSpec } from '../core/types';
+import { codeToSeed, randomSeed, seedToCode } from '../core/pattern/prng';
 import { MATERIALS } from '../data/palette';
+import { PRESETS } from '../data/presets';
 import { STR } from '../strings';
 
 const TYPE_LABELS: Record<PatternType, string> = {
@@ -26,9 +29,42 @@ export function PatternControls({
   onReroll: () => void;
 }) {
   const allowedList = MATERIALS.filter((m) => pattern.allowedMaterials.includes(m.id));
+  // Local text state for the friendly variation code, so typing doesn't fight
+  // the derived value; commit to a seed on blur/Enter.
+  const [codeDraft, setCodeDraft] = useState<string | null>(null);
+  const codeValue = codeDraft ?? seedToCode(pattern.seed);
+  const commitCode = () => {
+    if (codeDraft === null) return;
+    const seed = codeToSeed(codeDraft);
+    if (seed !== null) onPattern({ seed });
+    setCodeDraft(null);
+  };
   return (
     <div className="section">
-      <h2>{STR.pattern}</h2>
+      <h2>{STR.preset}</h2>
+      <div className="presets">
+        {PRESETS.map((p) => (
+          <button
+            key={p.id}
+            className="preset"
+            title={p.name}
+            onClick={() => onPattern({ ...p.config, seed: randomSeed() })}
+          >
+            <span className="preset-chips">
+              {p.swatch.map((id) => (
+                <span
+                  key={id}
+                  className="preset-chip"
+                  style={{ background: MATERIALS.find((m) => m.id === id)?.hex }}
+                />
+              ))}
+            </span>
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      <h2 style={{ marginTop: 16 }}>{STR.pattern}</h2>
 
       <div className="field">
         <select
@@ -139,19 +175,26 @@ export function PatternControls({
       )}
 
       <div className="field">
-        <label htmlFor="seed">{STR.seed}</label>
-        <div className="row">
+        <button className="btn primary" style={{ width: '100%' }} onClick={onReroll}>
+          ⟳ {STR.reroll}
+        </button>
+        <div className="row" style={{ marginTop: 8, alignItems: 'baseline' }}>
+          <label htmlFor="seed" style={{ flex: 'none', color: 'var(--pp-muted)', fontSize: 12 }}>
+            {STR.variation}
+          </label>
           <input
             id="seed"
-            type="number"
-            value={pattern.seed}
-            onChange={(e) => onPattern({ seed: Number(e.target.value) >>> 0 })}
+            type="text"
+            spellCheck={false}
+            value={codeValue}
+            onChange={(e) => setCodeDraft(e.target.value.toUpperCase())}
+            onBlur={commitCode}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            }}
           />
-          <button className="btn primary" style={{ flex: 'none' }} onClick={onReroll}>
-            ⟳ {STR.reroll}
-          </button>
         </div>
-        <p className="note">{STR.seedHint}</p>
+        <p className="note">{STR.variationHint}</p>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { PaletteGrid } from './PaletteGrid';
 import { PatternControls } from './PatternControls';
 import { ProductPicker } from './ProductPicker';
 import { SchedulePanel } from './SchedulePanel';
+import { ShareButton } from './ShareButton';
 
 /**
  * The left control panel — every design control, plus the schedule and export
@@ -99,6 +100,8 @@ export function ControlPanel({
       />
 
       <SchedulePanel schedule={schedule} product={product} />
+
+      <ShareButton design={design} />
 
       <ExportMenu
         ctx={{

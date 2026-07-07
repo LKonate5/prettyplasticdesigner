@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { metresToGrid } from '../core/layout';
 import type { Layout, ProductOptions, ProductSpec } from '../core/types';
 import { EXPOSURE_MAX, EXPOSURE_MIN } from '../data/products';
 import { STR } from '../strings';
@@ -7,8 +9,10 @@ function formatM(mm: number): string {
 }
 
 /**
- * Rows/Columns inputs plus Basic Third's exposure + bond, with a live
- * real-world dimension readout so architects see the wall size as they type.
+ * Wall sizing. The primary input is real-world metres (architects think that
+ * way); it converts to rows × columns via the product geometry. Rows/columns
+ * stay available underneath for precise control. Plus Basic Third's visible
+ * row height + bond, and a live dimension readout.
  */
 export function DimensionInputs({
   product,
@@ -28,10 +32,66 @@ export function DimensionInputs({
   onOptions: (next: Partial<ProductOptions>) => void;
 }) {
   const areaM2 = (layout.wallW * layout.wallH) / 1_000_000;
+  const [showGrid, setShowGrid] = useState(false);
+  // Draft strings for the metre fields so typing "3." works; commit on change.
+  const [wDraft, setWDraft] = useState<string | null>(null);
+  const [hDraft, setHDraft] = useState<string | null>(null);
+  const wVal = wDraft ?? formatM(layout.wallW);
+  const hVal = hDraft ?? formatM(layout.wallH);
+
+  const applyMetres = (widthM: number, heightM: number) => {
+    onGrid(metresToGrid(product, options, widthM, heightM));
+  };
+
   return (
     <div className="section">
-      <h2>{STR.wall}</h2>
+      <h2>{STR.wallSize}</h2>
       <div className="row">
+        <div className="field">
+          <label htmlFor="wm">{STR.widthM}</label>
+          <input
+            id="wm"
+            type="number"
+            min={0.3}
+            step={0.1}
+            value={wVal}
+            onChange={(e) => {
+              setWDraft(e.target.value);
+              const w = parseFloat(e.target.value);
+              if (Number.isFinite(w)) applyMetres(w, parseFloat(hVal));
+            }}
+            onBlur={() => setWDraft(null)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="hm">{STR.heightM}</label>
+          <input
+            id="hm"
+            type="number"
+            min={0.3}
+            step={0.1}
+            value={hVal}
+            onChange={(e) => {
+              setHDraft(e.target.value);
+              const h = parseFloat(e.target.value);
+              if (Number.isFinite(h)) applyMetres(parseFloat(wVal), h);
+            }}
+            onBlur={() => setHDraft(null)}
+          />
+        </div>
+      </div>
+
+      <button
+        className="btn"
+        style={{ fontSize: 12, padding: '4px 8px' }}
+        onClick={() => setShowGrid((s) => !s)}
+      >
+        {showGrid ? '▾ ' : '▸ '}
+        {STR.advancedGrid}
+      </button>
+
+      {showGrid && (
+        <div className="row" style={{ marginTop: 8 }}>
         <div className="field">
           <label htmlFor="rows">{STR.rows}</label>
           <input
@@ -54,7 +114,8 @@ export function DimensionInputs({
             onChange={(e) => onGrid({ cols: Number(e.target.value) })}
           />
         </div>
-      </div>
+        </div>
+      )}
 
       {product.hasExposure && (
         <div className="field">

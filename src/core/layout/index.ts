@@ -1,7 +1,7 @@
 import type { Layout, ProductOptions, ProductSpec } from '../types';
-import { layoutBasicThird } from './basicThird';
-import { layoutFirstOne } from './firstOne';
-import { layoutSecondHigh } from './secondHigh';
+import { BT_H, BT_W, layoutBasicThird } from './basicThird';
+import { FO_PITCH_X, FO_ROW_PITCH, layoutFirstOne } from './firstOne';
+import { layoutSecondHigh, SH_PITCH } from './secondHigh';
 
 /**
  * Single source of truth for tile geometry. The on-screen renderer, the SVG /
@@ -27,3 +27,29 @@ export function computeLayout(
       return layoutBasicThird(rows, cols, options);
   }
 }
+
+/**
+ * Convert a real-world wall size (metres) into rows × columns for a product.
+ * Architects think in metres, not tile counts. Rounds to the nearest whole
+ * tile (min 1); the reducer then snaps offset products to an even row count.
+ */
+export function metresToGrid(
+  product: ProductSpec,
+  options: ProductOptions,
+  widthM: number,
+  heightM: number,
+): { rows: number; cols: number } {
+  const w = Math.max(0, widthM) * 1000;
+  const h = Math.max(0, heightM) * 1000;
+  const atLeast1 = (n: number) => Math.max(1, Math.round(n));
+  switch (product.id) {
+    case 'first-one':
+      return { cols: atLeast1(w / FO_PITCH_X), rows: atLeast1(h / FO_ROW_PITCH) };
+    case 'second-high':
+      return { cols: atLeast1(w / SH_PITCH), rows: atLeast1(h / SH_PITCH) };
+    case 'basic-third':
+      // wallH = BT_H + (rows-1)·exposure  ⇒  rows = (h - BT_H)/exposure + 1
+      return { cols: atLeast1(w / BT_W), rows: atLeast1((h - BT_H) / options.exposure + 1) };
+  }
+}
+

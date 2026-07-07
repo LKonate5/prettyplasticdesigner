@@ -4,14 +4,18 @@ import { WallPreview } from './components/WallPreview';
 import { computeLayout } from './core/layout';
 import { computeSchedule } from './core/schedule';
 import { randomSeed } from './core/pattern/prng';
-import { appReducer, initialAppState } from './core/state/reducer';
+import { appReducer, appStateFromDesign, initialAppState } from './core/state/reducer';
 import { PRODUCTS } from './data/products';
+import { designFromHash } from './embed/share';
 import { probeTextures } from './render/textures';
 import type { TextureMap } from './render/textures';
 import { STR } from './strings';
 
 export function App() {
-  const [state, dispatch] = useReducer(appReducer, undefined, () => initialAppState(randomSeed()));
+  const [state, dispatch] = useReducer(appReducer, undefined, () => {
+    const shared = designFromHash(); // reopen a design shared via URL
+    return shared ? appStateFromDesign(shared) : initialAppState(randomSeed());
+  });
   const [textures, setTextures] = useState<TextureMap>(new Map());
   const [drawerOpen, setDrawerOpen] = useState(false);
 

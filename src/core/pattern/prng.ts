@@ -25,3 +25,19 @@ export function cellRng(seed: number, row: number, col: number): () => number {
 export function randomSeed(): number {
   return (Math.random() * 0xffffffff) >>> 0;
 }
+
+/**
+ * Friendly short code for a seed — a base-36 string like "K7X2P" instead of a
+ * meaningless 10-digit number. Reversible, so a user can jot one down and type
+ * it back to return to a look.
+ */
+export function seedToCode(seed: number): string {
+  return (seed >>> 0).toString(36).toUpperCase();
+}
+
+export function codeToSeed(code: string): number | null {
+  const cleaned = code.trim().toLowerCase().replace(/[^0-9a-z]/g, '');
+  if (!cleaned) return null;
+  const n = parseInt(cleaned, 36);
+  return Number.isFinite(n) ? n >>> 0 : null;
+}
