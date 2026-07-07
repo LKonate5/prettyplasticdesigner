@@ -26,9 +26,19 @@ interface WallSceneProps {
   textures: TextureMap;
   width?: string | number;
   height?: string | number;
+  /** Joint/grout colour behind the tiles (shows through the gaps). */
+  background?: string;
 }
 
-export function WallScene({ layout, cells, product, textures, width, height }: WallSceneProps) {
+export function WallScene({
+  layout,
+  cells,
+  product,
+  textures,
+  width,
+  height,
+  background = WALL_BG,
+}: WallSceneProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +48,7 @@ export function WallScene({ layout, cells, product, textures, width, height }: W
       preserveAspectRatio="xMidYMid meet"
     >
       <SceneDefs product={product} layout={layout} textures={textures} />
-      <rect x={0} y={0} width={layout.wallW} height={layout.wallH} fill={WALL_BG} />
+      <rect x={0} y={0} width={layout.wallW} height={layout.wallH} fill={background} />
       {layout.tiles.map((tile, i) => {
         const cell = cells[tile.cellIndex];
         const material = materialAt(cell?.material ?? 0);

@@ -1,7 +1,7 @@
-import type { Dispatch } from 'react';
+import { useState, type Dispatch } from 'react';
 import type { Action } from '../core/state/actions';
 import type { AppState } from '../core/state/reducer';
-import type { Schedule } from '../core/schedule';
+import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
 import { MATERIAL_IDS } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
@@ -9,10 +9,13 @@ import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
 import { DimensionInputs } from './DimensionInputs';
 import { ExportMenu } from './ExportMenu';
+import { JointColour } from './JointColour';
 import { ModeToggle } from './ModeToggle';
 import { PaletteGrid } from './PaletteGrid';
 import { PatternControls } from './PatternControls';
 import { ProductPicker } from './ProductPicker';
+import { QuotePanel } from './QuotePanel';
+import { RequestButtons } from './RequestButtons';
 import { SchedulePanel } from './SchedulePanel';
 import { ShareButton } from './ShareButton';
 
@@ -38,6 +41,18 @@ export function ControlPanel({
   dispatch: Dispatch<Action>;
 }) {
   const design = state.present;
+  // Tiles-per-box is packaging config, not part of the design — kept local.
+  const [tilesPerBox, setTilesPerBox] = useState<number | null>(null);
+  const order = computeOrder(product, schedule, design.wastePct, tilesPerBox);
+  const scene = {
+    product,
+    layout,
+    cells: design.cells,
+    textures,
+    options: design.options,
+    pattern: design.pattern,
+    background: design.jointColor,
+  };
 
   const toggleAllowed = (id: MaterialId) => {
     const has = design.pattern.allowedMaterials.includes(id);
@@ -88,6 +103,11 @@ export function ControlPanel({
         }
       />
 
+      <JointColour
+        value={design.jointColor}
+        onChange={(jointColor) => dispatch({ type: 'SET_JOINT', jointColor })}
+      />
+
       <ModeToggle
         product={product}
         mode={state.ui.mode}
@@ -101,18 +121,24 @@ export function ControlPanel({
 
       <SchedulePanel schedule={schedule} product={product} />
 
+      <QuotePanel
+        order={order}
+        wastePct={design.wastePct}
+        tilesPerBox={tilesPerBox}
+        onWaste={(wastePct) => dispatch({ type: 'SET_WASTE', wastePct })}
+        onTilesPerBox={setTilesPerBox}
+      />
+
       <ShareButton design={design} />
 
-      <ExportMenu
-        ctx={{
-          product,
-          layout,
-          cells: design.cells,
-          textures,
-          options: design.options,
-          pattern: design.pattern,
-          schedule,
-        }}
+      <ExportMenu ctx={{ ...scene, schedule }} />
+
+      <RequestButtons
+        design={design}
+        product={product}
+        schedule={schedule}
+        order={order}
+        scene={scene}
       />
 
       <p className="note">{STR.regenNote}</p>

@@ -13,6 +13,7 @@ export interface ExportContext {
   options: ProductOptions;
   pattern: PatternConfig;
   schedule: Schedule;
+  background: string;
 }
 
 type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj';
@@ -47,6 +48,7 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
     textures: ctx.textures,
     options: ctx.options,
     pattern: ctx.pattern,
+    background: ctx.background,
   };
   const name = baseName(ctx.product.id, ctx.layout.rows, ctx.layout.cols);
 

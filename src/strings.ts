@@ -70,6 +70,24 @@ export const STR = {
   tilesPerM2: 'tiles/m²',
   scheduleNote: 'Counts include cut edge tiles and exclude site waste — verify before ordering.',
 
+  jointColour: 'Joint colour',
+  jointHint: 'The grout colour showing through the gaps between tiles.',
+
+  order: 'Order & quantities',
+  waste: 'Waste allowance',
+  tilesPerBox: 'Tiles per box',
+  tilesPerBoxHint: 'Set this to your Pretty Plastic packaging to see boxes needed.',
+  onWall: 'On wall',
+  toOrder: 'To order',
+  boxes: 'Boxes',
+  boxesNeeded: 'boxes to order',
+  orderNote: 'Order quantities round each colour up and add the waste allowance.',
+
+  requestSample: 'Request a sample',
+  requestQuote: 'Request a quote',
+  requestHint: 'Opens a pre-filled email to Pretty Plastic. The quote also downloads your wall image to attach.',
+  quoteImageNote: 'Wall image downloaded — please attach it to this email.',
+
   capNotice: 'That size would exceed 5,000 tiles — reduce rows or columns.',
   regenNote:
     'Size and pattern changes regenerate the design. Hand-painted tiles may be replaced — Undo brings them back.',

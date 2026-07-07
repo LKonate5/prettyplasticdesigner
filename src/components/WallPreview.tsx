@@ -14,6 +14,7 @@ interface WallPreviewProps {
   textures: TextureMap;
   mode: 'paint' | 'rotate';
   brush: MaterialId;
+  background: string;
   dispatch: Dispatch<Action>;
 }
 
@@ -37,6 +38,7 @@ export function WallPreview({
   textures,
   mode,
   brush,
+  background,
   dispatch,
 }: WallPreviewProps) {
   const [zoom, setZoom] = useState<number | null>(null); // px per mm; null = fit
@@ -107,6 +109,7 @@ export function WallPreview({
       cells={cells}
       product={product}
       textures={textures}
+      background={background}
       width={zoom === null ? '100%' : layout.wallW * zoom}
       height={zoom === null ? '100%' : layout.wallH * zoom}
     />

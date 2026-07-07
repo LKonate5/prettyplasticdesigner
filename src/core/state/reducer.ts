@@ -30,7 +30,14 @@ export interface DesignState {
   options: ProductOptions;
   pattern: PatternConfig;
   cells: Cell[];
+  /** Colour of the joint/grout showing through the gaps (also the render background). */
+  jointColor: string;
+  /** Waste allowance (0..1) added to order quantities in the quote panel. */
+  wastePct: number;
 }
+
+export const DEFAULT_JOINT = '#26282b';
+export const DEFAULT_WASTE = 0.1;
 
 export interface AppState {
   past: DesignState[];
@@ -88,6 +95,8 @@ function buildDesign(
   cols: number,
   options: ProductOptions,
   pattern: PatternConfig,
+  jointColor = DEFAULT_JOINT,
+  wastePct = DEFAULT_WASTE,
 ): DesignState | null {
   const product = PRODUCTS[productId];
   const snappedRows = snapRows(productId, options, rows);
@@ -100,6 +109,8 @@ function buildDesign(
     options,
     pattern,
     cells: generatePattern(pattern, layout),
+    jointColor,
+    wastePct,
   };
 }
 
@@ -164,7 +175,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const { rows, cols } = DEFAULT_GRID[action.productId];
       return commit(
         state,
-        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern),
+        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern, p.jointColor, p.wastePct),
       );
     }
 
@@ -172,7 +183,10 @@ export function appReducer(state: AppState, action: Action): AppState {
       const rows = action.rows !== undefined ? clampGrid(action.rows) : p.rows;
       const cols = action.cols !== undefined ? clampGrid(action.cols) : p.cols;
       if (rows === p.rows && cols === p.cols) return state;
-      return commit(state, buildDesign(p.productId, rows, cols, p.options, p.pattern));
+      return commit(
+        state,
+        buildDesign(p.productId, rows, cols, p.options, p.pattern, p.jointColor, p.wastePct),
+      );
     }
 
     case 'SET_OPTIONS': {
@@ -191,7 +205,10 @@ export function appReducer(state: AppState, action: Action): AppState {
         // (including hand-painted ones) survive the slider.
         return commit(state, { ...p, options }, 'options:exposure');
       }
-      return commit(state, buildDesign(p.productId, p.rows, p.cols, options, p.pattern));
+      return commit(
+        state,
+        buildDesign(p.productId, p.rows, p.cols, options, p.pattern, p.jointColor, p.wastePct),
+      );
     }
 
     case 'SET_PATTERN': {
@@ -199,14 +216,34 @@ export function appReducer(state: AppState, action: Action): AppState {
       const keys = Object.keys(action.pattern);
       // Runs on one control (tone slider, seed typing…) coalesce into one undo.
       const kind = keys.length === 1 ? `pattern:${keys[0]}` : null;
-      return commit(state, buildDesign(p.productId, p.rows, p.cols, p.options, pattern), kind);
+      return commit(
+        state,
+        buildDesign(p.productId, p.rows, p.cols, p.options, pattern, p.jointColor, p.wastePct),
+        kind,
+      );
     }
 
     case 'REROLL':
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, p.options, { ...p.pattern, seed: action.seed }),
+        buildDesign(
+          p.productId,
+          p.rows,
+          p.cols,
+          p.options,
+          { ...p.pattern, seed: action.seed },
+          p.jointColor,
+          p.wastePct,
+        ),
       );
+
+    case 'SET_JOINT':
+      if (action.jointColor === p.jointColor) return state;
+      return commit(state, { ...p, jointColor: action.jointColor }, 'jointColor');
+
+    case 'SET_WASTE':
+      if (action.wastePct === p.wastePct) return state;
+      return commit(state, { ...p, wastePct: action.wastePct }, 'wastePct');
 
     case 'RESET': {
       const { rows, cols } = DEFAULT_GRID[p.productId];
