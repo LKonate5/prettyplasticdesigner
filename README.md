@@ -130,12 +130,19 @@ Everything below is generated **in your browser**, client-side:
 | **Seamless texture (PNG)** | A tileable image — one repeat of the pattern that wraps edge-to-edge, for 3D/render tools. Needs an even row count for offset patterns. |
 | **DXF (2D)** | The industry CAD interchange file. Millimetre units, one layer per colour. Opens in **AutoCAD, Revit, and SketchUp**. |
 | **PDF spec sheet** | One A4 page: the render + a tile schedule (count/% /m²/weight per colour) for quoting. |
+| **3D model — GLB** | Single self-contained file: every tile extruded to its real thickness, colours baked in. Opens in **SketchUp (2021+), Blender, Windows 3D Viewer** and online glTF viewers. |
+| **3D model — OBJ + MTL** | The same 3D wall as a zipped OBJ + material file — the most universal 3D interchange (older SketchUp, Rhino, 3ds Max, MeshLab). |
 
 **SketchUp (.skp) and Revit (.rvt/.rfa)** are proprietary formats that can't be
-written from a browser — no tool can. The correct path is to **import the DXF**
-(2D) into them, which they all do cleanly. A 3D export (OBJ / glTF) that opens
-directly in SketchUp is planned for phase 2 — the code is stubbed at
-`src/export/mesh.ts`.
+written from a browser — no tool can. The correct path is to **import** the
+GLB/OBJ (for 3D) or the DXF (for 2D); all of them open cleanly in SketchUp and
+Revit.
+
+The 3D model extrudes each tile's visible footprint to its true depth (First
+One 29 mm, Second High 67 mm, Basic Third 30 mm) with a thin joint between
+tiles. Surface relief (Second High's facets, Basic Third's bands) is shown in
+the 2D render/texture, not carved into the mesh — the mesh carries the true
+footprint, thickness and layout, which is what CAD/3D tools need.
 
 ---
 
@@ -150,7 +157,7 @@ src/
     schedule.ts, geometry.ts, types.ts
   render/      SVG scene (used on screen AND by every export)
   components/  The control panel + preview UI
-  export/      SVG, PNG/JPEG, seamless, DXF, PDF (each lazy-loaded)
+  export/      SVG, PNG/JPEG, seamless, DXF, PDF, GLB, OBJ (each lazy-loaded)
   data/        Product specs + palette (edit these to add products/colours)
   strings.ts   All interface text (one place → easy to translate later)
 ```

@@ -15,7 +15,7 @@ export interface ExportContext {
   schedule: Schedule;
 }
 
-type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf';
+type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'png', label: 'PNG image', note: 'Rendered wall, transparent-free raster' },
@@ -24,6 +24,8 @@ const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'seamless', label: 'Seamless texture (PNG)', note: 'Tileable repeat for 3D / render tools' },
   { id: 'dxf', label: 'DXF (2D CAD)', note: 'AutoCAD · Revit · SketchUp — mm, layer per colour' },
   { id: 'pdf', label: 'PDF spec sheet', note: 'Render + tile schedule for quoting' },
+  { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours — SketchUp · Blender · 3D viewers' },
+  { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL — universal 3D interchange' },
 ];
 
 // Scale presets in px per mm. 2 px/mm ≈ 200 dpi at real size — plenty for print.
@@ -87,6 +89,33 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
           await exportPdf(scene, ctx.schedule, ctx.options, `${name}.pdf`, dateLabel);
           break;
         }
+        case 'glb': {
+          const [{ buildWallMesh }, { buildGlb }, { downloadBlob }] = await Promise.all([
+            import('../export/mesh'),
+            import('../export/glb'),
+            import('../export/download'),
+          ]);
+          const mesh = buildWallMesh(ctx.product, ctx.layout, ctx.cells);
+          const glb = buildGlb(mesh);
+          downloadBlob(new Blob([glb], { type: 'model/gltf-binary' }), `${name}.glb`);
+          break;
+        }
+        case 'obj': {
+          const [{ buildWallMesh }, { buildObj }, { makeZip }, { downloadBlob }] = await Promise.all([
+            import('../export/mesh'),
+            import('../export/obj'),
+            import('../export/zip'),
+            import('../export/download'),
+          ]);
+          const mesh = buildWallMesh(ctx.product, ctx.layout, ctx.cells);
+          const { obj, mtl } = buildObj(mesh, `${name}.mtl`);
+          const zip = makeZip([
+            { name: `${name}.obj`, text: obj },
+            { name: `${name}.mtl`, text: mtl },
+          ]);
+          downloadBlob(zip, `${name}_obj.zip`);
+          break;
+        }
       }
     } catch (err) {
       setMsg(`Export failed: ${(err as Error).message}`);
@@ -116,8 +145,8 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
             </button>
           ))}
           <p className="note">
-            SketchUp (.skp) and Revit (.rvt) can’t be written in a browser — import the DXF (2D) or,
-            soon, the 3D model instead.
+            SketchUp (.skp) and Revit (.rvt) can’t be written in a browser — for 3D import the GLB or
+            OBJ, for 2D the DXF. They open cleanly in both.
           </p>
           {msg && <p className="warn">{msg}</p>}
         </div>
