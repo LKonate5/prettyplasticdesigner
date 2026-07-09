@@ -30,7 +30,6 @@ export interface ProductSpec {
   /** Square metres of tile per (euro)pallet — the unit Pretty Plastic ships in. */
   palletM2: number;
   supportsRotation: boolean; // second-high only
-  hasExposure: boolean; // basic-third only
   hasBond: boolean; // basic-third only
   maxTiles: number;
 }

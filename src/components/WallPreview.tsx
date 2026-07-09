@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import type { Action } from '../core/state/actions';
+import type { Schedule } from '../core/schedule';
 import type { Cell, Layout, MaterialId, ProductSpec } from '../core/types';
 import { materialIndex } from '../data/palette';
 import { WallScene, type ViewBox } from '../render/WallScene';
 import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
+import { PreviewLegend } from './PreviewLegend';
 
 interface WallPreviewProps {
   layout: Layout;
   cells: readonly Cell[];
   product: ProductSpec;
   textures: TextureMap;
+  schedule: Schedule;
   mode: 'paint' | 'rotate';
   brush: MaterialId;
   dispatch: Dispatch<Action>;
@@ -41,15 +44,18 @@ export function WallPreview({
   cells,
   product,
   textures,
+  schedule,
   mode,
   brush,
   dispatch,
 }: WallPreviewProps) {
   const { wallW, wallH } = layout;
   const [zoomFactor, setZoomFactor] = useState(1); // multiplier on the fit scale
+  const [pan, setPan] = useState({ x: 0, y: 0 }); // view offset in mm (Miro-style drag)
   const [size, setSize] = useState({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const gesture = useRef({ painting: false, lastCell: -1, back: false });
+  const scaleRef = useRef(0.2); // current px-per-mm, for the pan handler
 
   // Track the container size so we can fill it exactly.
   useEffect(() => {
@@ -75,7 +81,38 @@ export function WallPreview({
     }
   };
 
+  // Right-click or middle-drag pans the image in any direction (like Miro).
+  const startPan = (e: ReactPointerEvent) => {
+    e.preventDefault();
+    let lastX = e.clientX;
+    let lastY = e.clientY;
+    const s = scaleRef.current || 0.2;
+    const el = containerRef.current;
+    if (el) el.style.cursor = 'grabbing';
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - lastX;
+      const dy = ev.clientY - lastY;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      // drag the content with the cursor: view shifts opposite the drag
+      setPan((p) => ({ x: p.x - dx / s, y: p.y - dy / s }));
+    };
+    const end = () => {
+      if (el) el.style.cursor = '';
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
   const onPointerDown = (e: ReactPointerEvent) => {
+    if (e.button === 2 || e.button === 1) {
+      startPan(e);
+      return;
+    }
     if (e.button !== 0) return;
     if (!(e.target as Element).closest?.('[data-cell]')) return;
     e.preventDefault();
@@ -115,9 +152,15 @@ export function WallPreview({
   const ch = size.h || 600;
   const fitScale = (Math.min(cw / wallW, ch / wallH) || 0.2) * FIT_MARGIN;
   const scale = fitScale * zoomFactor;
+  scaleRef.current = scale;
   const vbW = cw / scale;
   const vbH = ch / scale;
-  const view: ViewBox = { x: wallW / 2 - vbW / 2, y: wallH / 2 - vbH / 2, w: vbW, h: vbH };
+  const view: ViewBox = {
+    x: wallW / 2 - vbW / 2 + pan.x,
+    y: wallH / 2 - vbH / 2 + pan.y,
+    w: vbW,
+    h: vbH,
+  };
 
   let offsets: Array<[number, number]> = [];
   const iMax = Math.floor((view.x + vbW) / wallW);
@@ -131,7 +174,12 @@ export function WallPreview({
   if (offsets.length * layout.tiles.length > MAX_RENDERED_TILES) offsets = [[0, 0]];
 
   return (
-    <div className="preview fill" ref={containerRef} onPointerDown={onPointerDown}>
+    <div
+      className="preview fill"
+      ref={containerRef}
+      onPointerDown={onPointerDown}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <WallScene
         layout={layout}
         cells={cells}
@@ -143,11 +191,18 @@ export function WallPreview({
         tileOffsets={offsets}
         frame
       />
+      <PreviewLegend schedule={schedule} />
       <div className="zoombar">
         <button onClick={() => setZoomFactor((z) => clampZoom(z / 1.25))} title={STR.zoomOut}>
           −
         </button>
-        <button onClick={() => setZoomFactor(1)} title={STR.zoomFit}>
+        <button
+          onClick={() => {
+            setZoomFactor(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          title={STR.zoomFit}
+        >
           ⤢
         </button>
         <button onClick={() => setZoomFactor((z) => clampZoom(z * 1.25))} title={STR.zoomIn}>

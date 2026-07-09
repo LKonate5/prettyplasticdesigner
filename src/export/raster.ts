@@ -1,3 +1,4 @@
+import type { Schedule } from '../core/schedule';
 import { downloadBlob } from './download';
 import { buildSceneSvg, type SceneInput } from './svg';
 
@@ -56,12 +57,17 @@ export async function renderRaster(
   scene: SceneInput,
   format: 'png' | 'jpeg',
   pxPerMm: number,
+  opts: { legend?: Schedule } = {},
 ): Promise<RasterResult> {
   const { wallW, wallH } = scene.layout;
   const { pxW, pxH, clamped } = clampScale(wallW, wallH, pxPerMm);
   const svg = await buildSceneSvg(scene, { mm: false });
   const canvas = await svgToCanvas(svg, pxW, pxH);
   const out = format === 'jpeg' ? withWhiteGround(canvas) : canvas;
+  if (opts.legend) {
+    const { drawLegend } = await import('./legend');
+    drawLegend(out.getContext('2d')!, opts.legend, pxW);
+  }
   const blob = await canvasToBlob(
     out,
     format === 'jpeg' ? 'image/jpeg' : 'image/png',
@@ -76,8 +82,9 @@ export async function exportRaster(
   format: 'png' | 'jpeg',
   pxPerMm: number,
   filename: string,
+  opts: { legend?: Schedule } = {},
 ): Promise<RasterResult> {
-  const result = await renderRaster(scene, format, pxPerMm);
+  const result = await renderRaster(scene, format, pxPerMm, opts);
   downloadBlob(result.blob, filename);
   return result;
 }

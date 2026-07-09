@@ -114,7 +114,6 @@ function specRows(product: ProductSpec, options: ProductOptions, s: Schedule): s
     ['Weight / tile', `${product.weightKg} kg`],
     ['Coverage', `${product.nominalTilesPerM2} tiles/m²`],
   ];
-  if (product.hasExposure) rows.push(['Course exposure', `${options.exposure} mm`]);
   if (product.hasBond) rows.push(['Bond', options.bond === 'staggered' ? 'Staggered' : 'Stacked']);
   rows.push(
     ['Wall size', `${mmToM(s.wallW)} × ${mmToM(s.wallH)} m`],

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { metresToGrid } from '../core/layout';
 import type { Layout, ProductOptions, ProductSpec } from '../core/types';
-import { EXPOSURE_MAX, EXPOSURE_MIN } from '../data/products';
 import { STR } from '../strings';
+import { DraftNumberInput } from './DraftNumberInput';
 
 function formatM(mm: number): string {
   return (mm / 1000).toFixed(2);
@@ -92,46 +92,26 @@ export function DimensionInputs({
 
       {showGrid && (
         <div className="row" style={{ marginTop: 8 }}>
-        <div className="field">
-          <label htmlFor="rows">{STR.rows}</label>
-          <input
-            id="rows"
-            type="number"
-            min={1}
-            max={80}
-            value={rows}
-            onChange={(e) => onGrid({ rows: Number(e.target.value) })}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="cols">{STR.columns}</label>
-          <input
-            id="cols"
-            type="number"
-            min={1}
-            max={80}
-            value={cols}
-            onChange={(e) => onGrid({ cols: Number(e.target.value) })}
-          />
-        </div>
-        </div>
-      )}
-
-      {product.hasExposure && (
-        <div className="field">
-          <label htmlFor="exposure">
-            {STR.exposure}: {options.exposure} mm
-          </label>
-          <input
-            id="exposure"
-            type="range"
-            min={EXPOSURE_MIN}
-            max={EXPOSURE_MAX}
-            step={5}
-            value={options.exposure}
-            onChange={(e) => onOptions({ exposure: Number(e.target.value) })}
-          />
-          <p className="note">{STR.exposureHint}</p>
+          <div className="field">
+            <label htmlFor="rows">{STR.rows}</label>
+            <DraftNumberInput
+              id="rows"
+              min={1}
+              max={80}
+              value={rows}
+              onCommit={(n) => onGrid({ rows: n })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="cols">{STR.columns}</label>
+            <DraftNumberInput
+              id="cols"
+              min={1}
+              max={80}
+              value={cols}
+              onCommit={(n) => onGrid({ cols: n })}
+            />
+          </div>
         </div>
       )}
 

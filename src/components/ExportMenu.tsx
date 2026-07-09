@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { Cell, Layout, PatternConfig, ProductOptions, ProductSpec } from '../core/types';
-import type { Schedule } from '../core/schedule';
+import type { Order, Schedule } from '../core/schedule';
+import type { DesignState } from '../core/state/reducer';
 import type { TextureMap } from '../render/textures';
 import { baseName, downloadText } from '../export/download';
+import { openMail, quoteEmail } from '../embed/email';
 import { STR } from '../strings';
 
 export interface ExportContext {
@@ -13,11 +15,14 @@ export interface ExportContext {
   options: ProductOptions;
   pattern: PatternConfig;
   schedule: Schedule;
+  design: DesignState;
+  order: Order;
 }
 
-type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj';
+type Format = 'email' | 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
+  { id: 'email', label: 'Email to Pretty Plastic', note: 'Opens a pre-filled quote email with the design + link' },
   { id: 'png', label: 'PNG image', note: 'Rendered wall, transparent-free raster' },
   { id: 'jpeg', label: 'JPEG image', note: 'Smaller file, white background' },
   { id: 'svg', label: 'SVG vector', note: 'True-mm scalable vector' },
@@ -55,10 +60,17 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
     setMsg(null);
     try {
       switch (format) {
+        case 'email': {
+          const { subject, body } = quoteEmail(ctx.product, ctx.schedule, ctx.design, ctx.order);
+          openMail(subject, body);
+          break;
+        }
         case 'png':
         case 'jpeg': {
           const { exportRaster } = await import('../export/raster');
-          const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${format}`);
+          const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${format}`, {
+            legend: ctx.schedule,
+          });
           if (r.clamped) setMsg('Large wall — image was capped at 8192 px on the long edge.');
           break;
         }

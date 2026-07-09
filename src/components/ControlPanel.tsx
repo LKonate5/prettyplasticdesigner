@@ -120,7 +120,7 @@ export function ControlPanel({
 
       <ShareButton design={design} />
 
-      <ExportMenu ctx={{ ...scene, schedule }} />
+      <ExportMenu ctx={{ ...scene, schedule, design, order }} />
 
       <RequestButtons
         design={design}

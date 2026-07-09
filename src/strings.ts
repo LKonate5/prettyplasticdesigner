@@ -13,9 +13,6 @@ export const STR = {
   widthM: 'Width (m)',
   heightM: 'Height (m)',
   advancedGrid: 'Set by rows & columns instead',
-  exposure: 'Visible row height',
-  exposureHint:
-    'How much of each tile shows. These tiles install overlapping like roof shingles, so the rest is hidden behind the row above. Less height = more overlap and more tiles.',
   bond: 'Bond',
   stacked: 'Stacked',
   staggered: 'Staggered',
