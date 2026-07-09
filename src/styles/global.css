@@ -299,18 +299,14 @@ input[type='checkbox'] {
 .preview {
   flex: 1;
   position: relative;
-  overflow: auto;
+  overflow: hidden; /* the pattern fills the whole area — no scrollbars */
   background: var(--pp-wall-bg);
-}
-
-.preview-fit {
-  width: 100%;
-  height: 100%;
-  display: flex;
 }
 
 .preview svg {
   display: block;
+  width: 100%;
+  height: 100%;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
