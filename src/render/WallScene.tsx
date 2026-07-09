@@ -102,17 +102,17 @@ export function WallScene({
           <path
             d={`M${v.x},${v.y} H${v.x + v.w} V${v.y + v.h} H${v.x} Z M0,0 H${wallW} V${wallH} H0 Z`}
             fillRule="evenodd"
-            fill="rgba(0,0,0,0.34)"
+            fill="rgba(0,0,0,0.5)"
           />
-          {/* the "cutoff" frame: dark halo + white line, crisp at any zoom */}
+          {/* the "cutoff" frame: dark halo + bold white line, crisp at any zoom */}
           <rect
             x={0}
             y={0}
             width={wallW}
             height={wallH}
             fill="none"
-            stroke="rgba(0,0,0,0.55)"
-            strokeWidth={4}
+            stroke="rgba(0,0,0,0.7)"
+            strokeWidth={6}
             vectorEffect="non-scaling-stroke"
           />
           <rect
@@ -122,7 +122,7 @@ export function WallScene({
             height={wallH}
             fill="none"
             stroke="#ffffff"
-            strokeWidth={1.5}
+            strokeWidth={2.5}
             vectorEffect="non-scaling-stroke"
           />
         </g>

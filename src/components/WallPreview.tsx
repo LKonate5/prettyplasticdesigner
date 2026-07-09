@@ -19,6 +19,9 @@ interface WallPreviewProps {
 
 // Keep the filled preview responsive: cap the total tiles drawn across repeats.
 const MAX_RENDERED_TILES = 9000;
+// Leave a margin of continuing pattern around the wall so its frame is always
+// visible on all four sides (the wall never touches the preview edges).
+const FIT_MARGIN = 0.78;
 
 /**
  * Full-bleed live preview. The wall pattern FILLS the whole area edge-to-edge
@@ -110,7 +113,7 @@ export function WallPreview({
   // Compute the visible mm region + the repeats needed to fill it.
   const cw = size.w || 800;
   const ch = size.h || 600;
-  const fitScale = Math.min(cw / wallW, ch / wallH) || 0.2;
+  const fitScale = (Math.min(cw / wallW, ch / wallH) || 0.2) * FIT_MARGIN;
   const scale = fitScale * zoomFactor;
   const vbW = cw / scale;
   const vbH = ch / scale;
