@@ -24,8 +24,6 @@ export interface SceneInput {
   textures: TextureMap;
   options: ProductOptions;
   pattern: PatternConfig;
-  /** Joint/grout colour behind the tiles. */
-  background: string;
 }
 
 /** Distinct materials actually used by the design (for texture inlining + DXF layers). */
@@ -45,7 +43,7 @@ export function usedMaterialIds(cells: readonly Cell[]): MaterialId[] {
  * true real-world size.
  */
 export async function buildSceneSvg(
-  { product, layout, cells, textures, background }: SceneInput,
+  { product, layout, cells, textures }: SceneInput,
   opts: { mm?: boolean } = {},
 ): Promise<string> {
   const dataUrls = await texturesAsDataUrls(textures, product.id, usedMaterialIds(cells));
@@ -58,7 +56,6 @@ export async function buildSceneSvg(
       cells,
       product,
       textures: inlineTextures,
-      background,
       width: mm ? `${round(layout.wallW)}mm` : undefined,
       height: mm ? `${round(layout.wallH)}mm` : undefined,
     }),

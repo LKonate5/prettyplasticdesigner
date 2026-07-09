@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from 'react';
+import type { Dispatch } from 'react';
 import type { Action } from '../core/state/actions';
 import type { AppState } from '../core/state/reducer';
 import { computeOrder, type Schedule } from '../core/schedule';
@@ -9,7 +9,6 @@ import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
 import { DimensionInputs } from './DimensionInputs';
 import { ExportMenu } from './ExportMenu';
-import { JointColour } from './JointColour';
 import { ModeToggle } from './ModeToggle';
 import { PaletteGrid } from './PaletteGrid';
 import { PatternControls } from './PatternControls';
@@ -41,9 +40,7 @@ export function ControlPanel({
   dispatch: Dispatch<Action>;
 }) {
   const design = state.present;
-  // Tiles-per-box is packaging config, not part of the design — kept local.
-  const [tilesPerBox, setTilesPerBox] = useState<number | null>(null);
-  const order = computeOrder(product, schedule, design.wastePct, tilesPerBox);
+  const order = computeOrder(product, schedule, design.wastePct);
   const scene = {
     product,
     layout,
@@ -51,7 +48,6 @@ export function ControlPanel({
     textures,
     options: design.options,
     pattern: design.pattern,
-    background: design.jointColor,
   };
 
   const toggleAllowed = (id: MaterialId) => {
@@ -103,11 +99,6 @@ export function ControlPanel({
         }
       />
 
-      <JointColour
-        value={design.jointColor}
-        onChange={(jointColor) => dispatch({ type: 'SET_JOINT', jointColor })}
-      />
-
       <ModeToggle
         product={product}
         mode={state.ui.mode}
@@ -124,9 +115,7 @@ export function ControlPanel({
       <QuotePanel
         order={order}
         wastePct={design.wastePct}
-        tilesPerBox={tilesPerBox}
         onWaste={(wastePct) => dispatch({ type: 'SET_WASTE', wastePct })}
-        onTilesPerBox={setTilesPerBox}
       />
 
       <ShareButton design={design} />

@@ -30,13 +30,10 @@ export interface DesignState {
   options: ProductOptions;
   pattern: PatternConfig;
   cells: Cell[];
-  /** Colour of the joint/grout showing through the gaps (also the render background). */
-  jointColor: string;
   /** Waste allowance (0..1) added to order quantities in the quote panel. */
   wastePct: number;
 }
 
-export const DEFAULT_JOINT = '#26282b';
 export const DEFAULT_WASTE = 0.1;
 
 export interface AppState {
@@ -95,7 +92,6 @@ function buildDesign(
   cols: number,
   options: ProductOptions,
   pattern: PatternConfig,
-  jointColor = DEFAULT_JOINT,
   wastePct = DEFAULT_WASTE,
 ): DesignState | null {
   const product = PRODUCTS[productId];
@@ -109,7 +105,6 @@ function buildDesign(
     options,
     pattern,
     cells: generatePattern(pattern, layout),
-    jointColor,
     wastePct,
   };
 }
@@ -175,7 +170,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const { rows, cols } = DEFAULT_GRID[action.productId];
       return commit(
         state,
-        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern, p.jointColor, p.wastePct),
+        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern, p.wastePct),
       );
     }
 
@@ -183,10 +178,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const rows = action.rows !== undefined ? clampGrid(action.rows) : p.rows;
       const cols = action.cols !== undefined ? clampGrid(action.cols) : p.cols;
       if (rows === p.rows && cols === p.cols) return state;
-      return commit(
-        state,
-        buildDesign(p.productId, rows, cols, p.options, p.pattern, p.jointColor, p.wastePct),
-      );
+      return commit(state, buildDesign(p.productId, rows, cols, p.options, p.pattern, p.wastePct));
     }
 
     case 'SET_OPTIONS': {
@@ -207,7 +199,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       }
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, options, p.pattern, p.jointColor, p.wastePct),
+        buildDesign(p.productId, p.rows, p.cols, options, p.pattern, p.wastePct),
       );
     }
 
@@ -218,7 +210,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const kind = keys.length === 1 ? `pattern:${keys[0]}` : null;
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, p.options, pattern, p.jointColor, p.wastePct),
+        buildDesign(p.productId, p.rows, p.cols, p.options, pattern, p.wastePct),
         kind,
       );
     }
@@ -226,20 +218,8 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'REROLL':
       return commit(
         state,
-        buildDesign(
-          p.productId,
-          p.rows,
-          p.cols,
-          p.options,
-          { ...p.pattern, seed: action.seed },
-          p.jointColor,
-          p.wastePct,
-        ),
+        buildDesign(p.productId, p.rows, p.cols, p.options, { ...p.pattern, seed: action.seed }, p.wastePct),
       );
-
-    case 'SET_JOINT':
-      if (action.jointColor === p.jointColor) return state;
-      return commit(state, { ...p, jointColor: action.jointColor }, 'jointColor');
 
     case 'SET_WASTE':
       if (action.wastePct === p.wastePct) return state;

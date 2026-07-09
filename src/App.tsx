@@ -79,7 +79,6 @@ export function App() {
         textures={textures}
         mode={state.ui.mode}
         brush={state.ui.brush}
-        background={design.jointColor}
         dispatch={dispatch}
       />
     </div>

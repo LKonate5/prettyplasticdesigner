@@ -1,6 +1,6 @@
 import { computeLayout } from '../core/layout';
 import { generatePattern } from '../core/pattern/generators';
-import { DEFAULT_JOINT, DEFAULT_WASTE, type DesignState } from '../core/state/reducer';
+import { DEFAULT_WASTE, type DesignState } from '../core/state/reducer';
 import type { Cell, MaterialId, PatternType, ProductId, Rotation } from '../core/types';
 import { materialAt, materialIndex, MATERIAL_IDS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
@@ -27,7 +27,6 @@ interface Packed {
   sdir: 'horizontal' | 'vertical';
   sw: number; // stripe width
   rr: 0 | 1; // randomRotation
-  jc: string; // joint colour hex
   w: number; // waste fraction
   o: [number, number, number][]; // overrides: [cellIndex, material, rotation]
 }
@@ -68,7 +67,6 @@ export function encodeDesign(design: DesignState): string {
     sdir: design.pattern.stripes.direction,
     sw: design.pattern.stripes.width,
     rr: design.pattern.randomRotation ? 1 : 0,
-    jc: design.jointColor,
     w: design.wastePct,
     o: overrides,
   };
@@ -98,7 +96,6 @@ export function decodeDesign(str: string): DesignState | null {
         randomRotation: packed.rr === 1,
       },
       cells: [],
-      jointColor: packed.jc ?? DEFAULT_JOINT,
       wastePct: typeof packed.w === 'number' ? packed.w : DEFAULT_WASTE,
     };
     // regenerate the baseline, then apply the hand-painted overrides

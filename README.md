@@ -118,16 +118,16 @@ you like. Then rebuild (`npm run build`).
 To change the brand colours/fonts of the **interface** (not the tiles), edit the
 handful of values at the top of `src/styles/theme.css`.
 
-## Configuration (`src/config.ts`)
+## Configuration (`src/config.ts` and `src/data/products.ts`)
 
-- **`SALES_EMAIL`** — where the "Request a sample" and "Request a quote" buttons
-  address their email. Defaults to `info@prettyplastic.nl`; change it to your
-  sales inbox if needed. (The buttons open the visitor's own email app with the
-  message pre-filled — the quote button also downloads the wall image to attach,
-  since emails can't carry an attachment by themselves.)
-- **`JOINT_COLOURS`** — the preset grout/joint colours in the picker.
-- **Tiles per box** is entered by the user in the Order panel (it's not baked in,
-  because packaging can change) — set a default there if you prefer.
+- **`SALES_EMAIL`** (`config.ts`) — where the "Request a sample" and "Request a
+  quote" buttons address their email. Defaults to `info@prettyplastic.nl`. (The
+  buttons open the visitor's own email app with the message pre-filled — the
+  quote button also downloads the wall image to attach, since emails can't carry
+  an attachment by themselves.)
+- **`palletM2`** (`products.ts`) — square metres of tile per europallet, per
+  product (First One 40, Second High 30, Basic Third 60). Order quantities are
+  rounded up to full square metres and divided into whole pallets.
 
 ---
 

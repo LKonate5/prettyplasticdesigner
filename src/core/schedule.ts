@@ -22,51 +22,38 @@ export interface Schedule {
   wallH: number;
 }
 
-export interface OrderRow {
-  material: Material;
-  need: number; // tiles on the wall
-  order: number; // rounded up incl. waste
-}
-
 export interface Order {
-  rows: OrderRow[];
   wastePct: number;
-  totalNeed: number;
-  totalOrder: number;
-  boxes: number | null; // null when tiles-per-box not set
-  tilesPerBox: number | null;
-  areaToOrderM2: number;
-  weightToOrderKg: number;
+  /** Exact wall coverage in m² (for reference). */
+  exactM2: number;
+  /** Whole m² to cover the wall — Pretty Plastic ships full square metres only. */
+  onWallM2: number;
+  /** Whole m² to order, incl. the waste allowance. */
+  toOrderM2: number;
+  palletM2: number;
+  pallets: number;
+  weightKg: number;
 }
 
 /**
- * Order-ready quantities: each colour rounded UP with a waste allowance, plus
- * boxes if a tiles-per-box figure is given. Waste covers cuts and breakage;
- * rounding up per colour means you never under-order a shade.
+ * Order-ready quantities. Pretty Plastic ships in FULL square metres (no
+ * halves) on europallets, so everything rounds UP to whole m²: the coverage,
+ * the order (coverage + waste), and the pallet count. Waste covers cuts and
+ * breakage.
  */
-export function computeOrder(
-  product: ProductSpec,
-  schedule: Schedule,
-  wastePct: number,
-  tilesPerBox: number | null,
-): Order {
-  const factor = 1 + Math.max(0, wastePct);
-  const rows: OrderRow[] = schedule.rows.map((r) => ({
-    material: r.material,
-    need: r.count,
-    order: Math.ceil(r.count * factor),
-  }));
-  const totalOrder = rows.reduce((s, r) => s + r.order, 0);
-  const perBox = tilesPerBox && tilesPerBox > 0 ? Math.floor(tilesPerBox) : null;
+export function computeOrder(product: ProductSpec, schedule: Schedule, wastePct: number): Order {
+  const exactM2 = schedule.areaM2;
+  const onWallM2 = Math.ceil(exactM2);
+  const toOrderM2 = Math.ceil(exactM2 * (1 + Math.max(0, wastePct)));
+  const kgPerM2 = product.weightKg * product.nominalTilesPerM2;
   return {
-    rows,
     wastePct,
-    totalNeed: schedule.totalTiles,
-    totalOrder,
-    tilesPerBox: perBox,
-    boxes: perBox ? Math.ceil(totalOrder / perBox) : null,
-    areaToOrderM2: totalOrder / product.nominalTilesPerM2,
-    weightToOrderKg: totalOrder * product.weightKg,
+    exactM2,
+    onWallM2,
+    toOrderM2,
+    palletM2: product.palletM2,
+    pallets: Math.ceil(toOrderM2 / product.palletM2),
+    weightKg: Math.round(toOrderM2 * kgPerM2),
   };
 }
 

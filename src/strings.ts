@@ -70,18 +70,14 @@ export const STR = {
   tilesPerM2: 'tiles/m²',
   scheduleNote: 'Counts include cut edge tiles and exclude site waste — verify before ordering.',
 
-  jointColour: 'Joint colour',
-  jointHint: 'The grout colour showing through the gaps between tiles.',
-
   order: 'Order & quantities',
   waste: 'Waste allowance',
-  tilesPerBox: 'Tiles per box',
-  tilesPerBoxHint: 'Set this to your Pretty Plastic packaging to see boxes needed.',
   onWall: 'On wall',
   toOrder: 'To order',
-  boxes: 'Boxes',
-  boxesNeeded: 'boxes to order',
-  orderNote: 'Order quantities round each colour up and add the waste allowance.',
+  pallets: 'Pallets',
+  weight: 'Weight',
+  palletNote: (m2: number) =>
+    `Pretty Plastic ships in full square metres on europallets (${m2} m² per pallet). Quantities are rounded up.`,
 
   requestSample: 'Request a sample',
   requestQuote: 'Request a quote',

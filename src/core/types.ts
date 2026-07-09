@@ -27,6 +27,8 @@ export interface ProductSpec {
   weightKg: number;
   /** Published coverage figure — display only; layout math derives its own exact pitches. */
   nominalTilesPerM2: number;
+  /** Square metres of tile per (euro)pallet — the unit Pretty Plastic ships in. */
+  palletM2: number;
   supportsRotation: boolean; // second-high only
   hasExposure: boolean; // basic-third only
   hasBond: boolean; // basic-third only

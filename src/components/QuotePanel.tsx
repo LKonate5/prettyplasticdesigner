@@ -2,21 +2,18 @@ import type { Order } from '../core/schedule';
 import { STR } from '../strings';
 
 /**
- * Order-ready quantities: waste allowance, per-colour amounts rounded up, and
- * (when a tiles-per-box figure is given) the number of boxes to order.
+ * Order-ready quantities in FULL square metres (Pretty Plastic ships no halves)
+ * plus the number of europallets. Per-colour detail lives in the tile schedule
+ * above; here it's the total to order.
  */
 export function QuotePanel({
   order,
   wastePct,
-  tilesPerBox,
   onWaste,
-  onTilesPerBox,
 }: {
   order: Order;
   wastePct: number;
-  tilesPerBox: number | null;
   onWaste: (pct: number) => void;
-  onTilesPerBox: (n: number | null) => void;
 }) {
   return (
     <div className="section">
@@ -38,65 +35,35 @@ export function QuotePanel({
       </div>
 
       <table className="schedule">
-        <thead>
-          <tr>
-            <th>{STR.material}</th>
-            <th>{STR.onWall}</th>
-            <th>{STR.toOrder}</th>
-          </tr>
-        </thead>
         <tbody>
-          {order.rows.map((r) => (
-            <tr key={r.material.id}>
-              <td>
-                <span className="dot" style={{ background: r.material.hex }} />
-                {r.material.name}
-              </td>
-              <td>{r.need}</td>
-              <td>
-                <strong>{r.order}</strong>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
           <tr>
-            <td>{STR.total}</td>
-            <td>{order.totalNeed}</td>
+            <td>{STR.onWall}</td>
+            <td style={{ textAlign: 'right' }}>{order.onWallM2} m²</td>
+          </tr>
+          <tr>
             <td>
-              <strong>{order.totalOrder}</strong>
+              {STR.toOrder} <span className="readout">(+{Math.round(wastePct * 100)}%)</span>
+            </td>
+            <td style={{ textAlign: 'right' }}>
+              <strong>{order.toOrderM2} m²</strong>
             </td>
           </tr>
-        </tfoot>
+          <tr>
+            <td>{STR.pallets}</td>
+            <td style={{ textAlign: 'right' }}>
+              <strong>{order.pallets}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td>{STR.weight}</td>
+            <td style={{ textAlign: 'right' }}>≈ {order.weightKg} kg</td>
+          </tr>
+        </tbody>
       </table>
 
-      <p className="readout" style={{ marginTop: 8 }}>
-        {order.areaToOrderM2.toFixed(1)} m² · {order.weightToOrderKg.toFixed(0)} kg
-        {order.boxes !== null && (
-          <>
-            {' '}
-            · <strong>{order.boxes}</strong> {STR.boxesNeeded}
-          </>
-        )}
+      <p className="note">
+        {STR.palletNote(order.palletM2)}
       </p>
-
-      <div className="field" style={{ marginTop: 8 }}>
-        <label htmlFor="perbox">{STR.tilesPerBox}</label>
-        <input
-          id="perbox"
-          type="number"
-          min={1}
-          placeholder="—"
-          value={tilesPerBox ?? ''}
-          onChange={(e) => {
-            const n = parseInt(e.target.value, 10);
-            onTilesPerBox(Number.isFinite(n) && n > 0 ? n : null);
-          }}
-        />
-        <p className="note">{STR.tilesPerBoxHint}</p>
-      </div>
-
-      <p className="note">{STR.orderNote}</p>
     </div>
   );
 }

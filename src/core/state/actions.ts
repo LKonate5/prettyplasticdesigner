@@ -19,5 +19,4 @@ export type Action =
   | { type: 'REDO' }
   | { type: 'SET_MODE'; mode: 'paint' | 'rotate' }
   | { type: 'SET_BRUSH'; brush: MaterialId }
-  | { type: 'SET_JOINT'; jointColor: string }
   | { type: 'SET_WASTE'; wastePct: number };
