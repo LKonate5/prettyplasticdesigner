@@ -41,16 +41,17 @@ export function ModeToggle({
         </div>
       )}
       <div className="row">
-        <button className="btn" disabled={!canUndo} onClick={onUndo}>
+        <button className="btn" disabled={!canUndo} onClick={onUndo} title={STR.undoHint}>
           ↩ {STR.undo}
         </button>
-        <button className="btn" disabled={!canRedo} onClick={onRedo}>
+        <button className="btn" disabled={!canRedo} onClick={onRedo} title={STR.redoHint}>
           {STR.redo} ↪
         </button>
-        <button className="btn" onClick={onReset}>
+        <button className="btn" onClick={onReset} title={STR.resetHint}>
           {STR.reset}
         </button>
       </div>
+      <p className="note">{STR.toolsHint}</p>
     </div>
   );
 }

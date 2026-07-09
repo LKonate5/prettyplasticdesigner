@@ -36,6 +36,15 @@ describe('computeOrder', () => {
     expect(order.toOrderM2).toBe(Math.ceil(9 * 1.1)); // ceil(9.9) = 10
   });
 
+  it('adds waste to the ROUNDED coverage (10 m² + 10% = 11)', () => {
+    const l = layoutSecondHigh(11, 10); // 3.0 × 3.3 = 9.9 m² → on-wall 10
+    const c: Cell[] = l.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const s = computeSchedule(PRODUCTS['second-high'], l, c);
+    const order = computeOrder(PRODUCTS['second-high'], s, 0.1);
+    expect(order.onWallM2).toBe(10);
+    expect(order.toOrderM2).toBe(11); // ceil(10 × 1.1), NOT ceil(9.9 × 1.1) = 11 either but from 10
+  });
+
   it('rounds a fractional wall up (no halves)', () => {
     const l = layoutSecondHigh(11, 11); // 3.3×3.3 = 10.89 m²
     const c: Cell[] = l.tiles.map(() => ({ material: 0, rotation: 0 }));

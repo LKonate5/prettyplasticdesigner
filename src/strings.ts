@@ -59,6 +59,10 @@ export const STR = {
   undo: 'Undo',
   redo: 'Redo',
   reset: 'Reset',
+  undoHint: 'Step back your last change (paint, pattern, size…). Also ⌘/Ctrl+Z.',
+  redoHint: 'Re-apply a change you just undid. Also ⇧⌘/Ctrl+Z.',
+  resetHint: 'Clear everything and start over with a fresh random design.',
+  toolsHint: 'Undo / Redo step through your changes; Reset starts a brand-new design.',
 
   schedule: 'Tile schedule',
   material: 'Material',

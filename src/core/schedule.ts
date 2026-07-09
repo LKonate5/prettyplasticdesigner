@@ -43,8 +43,11 @@ export interface Order {
  */
 export function computeOrder(product: ProductSpec, schedule: Schedule, wastePct: number): Order {
   const exactM2 = schedule.areaM2;
+  // Round the wall coverage up to whole m² FIRST, then add the waste on top and
+  // round up again — so "10 m² + 10%" orders 11 m², not 10 (the waste is never
+  // swallowed by rounding).
   const onWallM2 = Math.ceil(exactM2);
-  const toOrderM2 = Math.ceil(exactM2 * (1 + Math.max(0, wastePct)));
+  const toOrderM2 = Math.ceil(onWallM2 * (1 + Math.max(0, wastePct)));
   const kgPerM2 = product.weightKg * product.nominalTilesPerM2;
   return {
     wastePct,
