@@ -36,8 +36,9 @@ const FIT_MARGIN = 0.78;
  * and drags resolve the tile under the cursor with document.elementFromPoint. A
  * drag is bracketed by STROKE_START/END so it lands as a single undo entry.
  *
- * Zoom: +/− buttons or ctrl/cmd+wheel scale the pattern; Fit resets. The view
- * stays centred on the wall.
+ * Navigate: right-click / middle drag pans (Miro-style); on touch, one finger
+ * paints and two fingers pan + pinch-zoom. +/− buttons or ctrl/cmd+wheel also
+ * zoom; Fit resets zoom + pan.
  */
 export function WallPreview({
   layout,
@@ -54,8 +55,25 @@ export function WallPreview({
   const [pan, setPan] = useState({ x: 0, y: 0 }); // view offset in mm (Miro-style drag)
   const [size, setSize] = useState({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const gesture = useRef({ painting: false, lastCell: -1, back: false });
+  const gesture = useRef<{
+    painting: boolean;
+    lastCell: number;
+    back: boolean;
+    endPaint: (() => void) | null;
+  }>({ painting: false, lastCell: -1, back: false, endPaint: null });
   const scaleRef = useRef(0.2); // current px-per-mm, for the pan handler
+  const pointers = useRef(new Map<number, { x: number; y: number }>()); // active touch points
+
+  // Keep the touch-pointer map accurate no matter how a gesture ends.
+  useEffect(() => {
+    const clear = (e: PointerEvent) => pointers.current.delete(e.pointerId);
+    window.addEventListener('pointerup', clear);
+    window.addEventListener('pointercancel', clear);
+    return () => {
+      window.removeEventListener('pointerup', clear);
+      window.removeEventListener('pointercancel', clear);
+    };
+  }, []);
 
   // Track the container size so we can fill it exactly.
   useEffect(() => {
@@ -108,15 +126,11 @@ export function WallPreview({
     window.addEventListener('pointercancel', end);
   };
 
-  const onPointerDown = (e: ReactPointerEvent) => {
-    if (e.button === 2 || e.button === 1) {
-      startPan(e);
-      return;
-    }
-    if (e.button !== 0) return;
-    if (!(e.target as Element).closest?.('[data-cell]')) return;
+  const startPaint = (e: ReactPointerEvent) => {
     e.preventDefault();
-    gesture.current = { painting: true, lastCell: -1, back: e.shiftKey };
+    gesture.current.painting = true;
+    gesture.current.lastCell = -1;
+    gesture.current.back = e.shiftKey;
     dispatch({ type: 'STROKE_START' });
     applyAt(e.target as Element);
     const move = (ev: PointerEvent) => {
@@ -124,8 +138,48 @@ export function WallPreview({
       applyAt(document.elementFromPoint(ev.clientX, ev.clientY));
     };
     const end = () => {
+      if (!gesture.current.painting) return;
       gesture.current.painting = false;
+      gesture.current.endPaint = null;
       dispatch({ type: 'STROKE_END' });
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+    gesture.current.endPaint = end;
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
+  // Two-finger drag pans and pinch zooms (the touch equivalent of right-drag).
+  const startPinch = () => {
+    const two = () => [...pointers.current.values()].slice(0, 2);
+    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const cen = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    });
+    const [a0, b0] = two();
+    let lastDist = dist(a0, b0);
+    let lastC = cen(a0, b0);
+    const move = (ev: PointerEvent) => {
+      if (pointers.current.has(ev.pointerId)) {
+        pointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      }
+      if (pointers.current.size < 2) return;
+      const [a, b] = two();
+      const d = dist(a, b);
+      const c = cen(a, b);
+      const s = scaleRef.current || 0.2;
+      setPan((p) => ({ x: p.x - (c.x - lastC.x) / s, y: p.y - (c.y - lastC.y) / s }));
+      setZoomFactor((z) => clampZoom(z * (d / lastDist)));
+      lastDist = d;
+      lastC = c;
+    };
+    const end = () => {
+      if (pointers.current.size >= 2) return; // one finger still down: keep going
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
@@ -133,6 +187,25 @@ export function WallPreview({
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
+  };
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    // mouse right / middle → pan
+    if (e.button === 2 || e.button === 1) {
+      startPan(e);
+      return;
+    }
+    if (e.pointerType === 'touch') {
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.current.size >= 2) {
+        gesture.current.endPaint?.(); // a second finger cancels painting
+        startPinch();
+        return;
+      }
+    }
+    if (e.button !== 0) return;
+    if (!(e.target as Element).closest?.('[data-cell]')) return;
+    startPaint(e);
   };
 
   useEffect(() => {

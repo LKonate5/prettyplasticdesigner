@@ -24,6 +24,7 @@ import { ShareButton } from './ShareButton';
  */
 export function ControlPanel({
   open,
+  onClose,
   state,
   product,
   layout,
@@ -32,6 +33,7 @@ export function ControlPanel({
   dispatch,
 }: {
   open: boolean;
+  onClose: () => void;
   state: AppState;
   product: ProductSpec;
   layout: Layout;
@@ -62,8 +64,13 @@ export function ControlPanel({
   return (
     <aside className={`panel${open ? ' open' : ''}`}>
       <div className="brand">
-        <strong>{STR.brand}</strong>
-        <span>{STR.appTitle}</span>
+        <div>
+          <strong>{STR.brand}</strong>
+          <span>{STR.appTitle}</span>
+        </div>
+        <button className="drawer-done" onClick={onClose} aria-label={STR.seeWall}>
+          {STR.seeWall} ✕
+        </button>
       </div>
 
       <ProductPicker

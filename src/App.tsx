@@ -65,6 +65,7 @@ export function App() {
       {drawerOpen && <div className="backdrop" onClick={() => setDrawerOpen(false)} />}
       <ControlPanel
         open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         state={state}
         product={product}
         layout={layout}

@@ -92,7 +92,8 @@ export const STR = {
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
   zoomFit: 'Fit wall to view',
-  menu: 'Menu',
+  menu: 'Design',
+  seeWall: 'See wall',
   export: 'Export',
 
   share: 'Share design',
