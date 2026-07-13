@@ -78,7 +78,6 @@ export function App() {
         cells={design.cells}
         product={product}
         textures={textures}
-        schedule={schedule}
         mode={state.ui.mode}
         brush={state.ui.brush}
         dispatch={dispatch}

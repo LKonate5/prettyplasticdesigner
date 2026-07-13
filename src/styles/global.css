@@ -331,47 +331,6 @@ input[type='checkbox'] {
   cursor: crosshair;
 }
 
-/* colour legend overlaid on the preview (also baked into raster exports) */
-.legend {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 4;
-  pointer-events: none;
-  background: rgba(20, 21, 23, 0.82);
-  color: #fff;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 11px;
-  line-height: 1.5;
-  max-width: 210px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.legend-title {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  margin-bottom: 5px;
-  white-space: nowrap;
-}
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-name {
-  flex: 1;
-  white-space: nowrap;
-}
-
-.legend-count {
-  color: rgba(255, 255, 255, 0.7);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .zoombar {
   position: fixed;
   right: 12px;
@@ -510,17 +469,4 @@ table.schedule {
     min-height: 40px;
   }
 
-  /* keep the legend clear of the Design button and small on a phone */
-  .legend {
-    top: 60px;
-    font-size: 10px;
-    max-width: 46vw;
-    padding: 6px 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .legend .legend-count {
-    display: none; /* just show the colour names on a phone */
-  }
 }

@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import type { Action } from '../core/state/actions';
-import type { Schedule } from '../core/schedule';
 import type { Cell, Layout, MaterialId, ProductSpec } from '../core/types';
 import { materialIndex } from '../data/palette';
 import { WallScene, type ViewBox } from '../render/WallScene';
 import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
-import { PreviewLegend } from './PreviewLegend';
 
 interface WallPreviewProps {
   layout: Layout;
   cells: readonly Cell[];
   product: ProductSpec;
   textures: TextureMap;
-  schedule: Schedule;
   mode: 'paint' | 'rotate';
   brush: MaterialId;
   dispatch: Dispatch<Action>;
@@ -45,7 +42,6 @@ export function WallPreview({
   cells,
   product,
   textures,
-  schedule,
   mode,
   brush,
   dispatch,
@@ -264,7 +260,6 @@ export function WallPreview({
         tileOffsets={offsets}
         frame
       />
-      <PreviewLegend schedule={schedule} />
       <div className="zoombar">
         <button onClick={() => setZoomFactor((z) => clampZoom(z / 1.25))} title={STR.zoomOut}>
           −
