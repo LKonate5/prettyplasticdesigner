@@ -13,7 +13,7 @@ export const pointsAttr = (poly: Pt[]): string =>
 // First One's nested ones — see lapShadowBands in layout/firstOne.ts). First
 // One stacks several bands of this same fill via normal alpha compositing, so
 // its lap reads as a soft falloff rather than one flat stripe.
-const SHADOW_FILL = 'rgba(0,0,0,0.14)';
+const SHADOW_FILL = 'rgba(0,0,0,0.18)';
 
 // First One photo placement (photos are ~1785×2400: the full 304×400 mm
 // physical diamond incl. its hidden top lap, on a backdrop). The image is
@@ -90,8 +90,10 @@ interface TileShapeProps {
  * with the tile); First One draws the diamond photo clipped to the shared
  * #pp-diamond rhombus. Basic Third covers its rect with either its own future
  * photos (full-frame, like Second High) or — for now — a safe centre-crop of
- * First One's borrowed photos (BorrowedPhotoFill). Without a photo: hex fill +
- * the procedural facet/band overlays.
+ * First One's borrowed photos (BorrowedPhotoFill); its 3 vertical relief bands
+ * (#pp-bands) always draw on top regardless, since that grooved 3-slat profile
+ * is the product's actual physical shape, not just a no-photo placeholder.
+ * Without a photo: hex fill + the procedural facet/band overlays.
  */
 export const TileShape = memo(function TileShape({
   tile,
@@ -165,7 +167,7 @@ export const TileShape = memo(function TileShape({
           }`}
         />
       )}
-      {productId === 'basic-third' && !texUrl && (
+      {productId === 'basic-third' && (
         <use href="#pp-bands" transform={`translate(${fmt(x)} ${fmt(y)})`} />
       )}
       {tile.shadowStrips.map((strip, i) => (
