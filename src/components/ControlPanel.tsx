@@ -145,6 +145,7 @@ export function ControlPanel({
 
       <QuotePanel
         order={order}
+        schedule={schedule}
         wastePct={design.wastePct}
         onWaste={(wastePct) => dispatch({ type: 'SET_WASTE', wastePct })}
       />

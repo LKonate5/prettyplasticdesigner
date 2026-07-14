@@ -77,6 +77,7 @@ export const STR = {
   order: 'Order & quantities',
   waste: 'Waste allowance',
   onWall: 'On wall',
+  byColour: 'by colour',
   toOrder: 'To order',
   pallets: 'Pallets',
   weight: 'Weight',

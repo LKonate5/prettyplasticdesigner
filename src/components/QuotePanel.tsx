@@ -1,20 +1,26 @@
-import type { Order } from '../core/schedule';
+import { useState } from 'react';
+import type { Order, Schedule } from '../core/schedule';
 import { STR } from '../strings';
 
 /**
  * Order-ready quantities in FULL square metres (Pretty Plastic ships no halves)
- * plus the number of europallets. Per-colour detail lives in the tile schedule
- * above; here it's the total to order.
+ * plus the number of europallets. "On wall" expands to show the per-colour
+ * split of the m² to order (each colour's share of order.toOrderM2, so the
+ * waste allowance is already folded in).
  */
 export function QuotePanel({
   order,
+  schedule,
   wastePct,
   onWaste,
 }: {
   order: Order;
+  schedule: Schedule;
   wastePct: number;
   onWaste: (pct: number) => void;
 }) {
+  const [byColourOpen, setByColourOpen] = useState(false);
+
   return (
     <div className="section">
       <h2>{STR.order}</h2>
@@ -36,10 +42,24 @@ export function QuotePanel({
 
       <table className="schedule">
         <tbody>
-          <tr>
-            <td>{STR.onWall}</td>
+          <tr style={{ cursor: 'pointer' }} onClick={() => setByColourOpen((o) => !o)}>
+            <td>
+              {STR.onWall} <span className="readout">{byColourOpen ? '▾' : '▸'} {STR.byColour}</span>
+            </td>
             <td style={{ textAlign: 'right' }}>{order.onWallM2} m²</td>
           </tr>
+          {byColourOpen &&
+            schedule.rows.map((r) => (
+              <tr key={r.material.id}>
+                <td style={{ paddingLeft: 16 }}>
+                  <span className="dot" style={{ background: r.material.hex }} />
+                  {r.material.name}
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  {((r.pct / 100) * order.toOrderM2).toFixed(1)} m²
+                </td>
+              </tr>
+            ))}
           <tr>
             <td>
               {STR.toOrder} <span className="readout">(+{Math.round(wastePct * 100)}%)</span>
