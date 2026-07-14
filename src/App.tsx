@@ -7,7 +7,7 @@ import { randomSeed } from './core/pattern/prng';
 import { appReducer, appStateFromDesign, initialAppState } from './core/state/reducer';
 import { PRODUCTS } from './data/products';
 import { designFromHash } from './embed/share';
-import { probeTextures } from './render/textures';
+import { loadTextures } from './render/textures';
 import type { TextureMap } from './render/textures';
 import { STR } from './strings';
 
@@ -19,10 +19,10 @@ export function App() {
   const [textures, setTextures] = useState<TextureMap>(new Map());
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Probe for drop-in texture PNGs once at startup (falls back to hex).
+  // Load the real tile-photo manifest once at startup (falls back to hex).
   useEffect(() => {
     let live = true;
-    probeTextures().then((map) => live && setTextures(map));
+    loadTextures().then((map) => live && setTextures(map));
     return () => {
       live = false;
     };

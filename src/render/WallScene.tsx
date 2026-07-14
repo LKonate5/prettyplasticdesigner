@@ -2,7 +2,7 @@ import type { Cell, Layout, ProductSpec } from '../core/types';
 import { materialAt } from '../data/palette';
 import { SceneDefs } from './defs';
 import type { TextureMap } from './textures';
-import { textureKey } from './textures';
+import { textureKey, variantFor } from './textures';
 import { TileShape } from './TileShape';
 
 /**
@@ -64,13 +64,18 @@ export function WallScene({
   const tiles = layout.tiles.map((tile, i) => {
     const cell = cells[tile.cellIndex];
     const material = materialAt(cell?.material ?? 0);
+    const variants = textures.get(textureKey(product.id, material.id));
     return (
       <TileShape
         key={i}
         tile={tile}
         material={material}
         rotation={cell?.rotation ?? 0}
-        texUrl={textures.get(textureKey(product.id, material.id)) ?? null}
+        texUrl={
+          variants && variants.length > 0
+            ? variantFor(variants, tile.patternRow, tile.patternCol)
+            : null
+        }
         productId={product.id}
       />
     );
@@ -84,7 +89,7 @@ export function WallScene({
       height={height}
       preserveAspectRatio={preserveAspectRatio}
     >
-      <SceneDefs product={product} layout={layout} textures={textures} />
+      <SceneDefs product={product} layout={layout} />
       {/* backing fills the whole visible region so repeats sit on the same ground */}
       <rect x={v.x} y={v.y} width={v.w} height={v.h} fill={WALL_BG} />
       {offsets.map(([dx, dy], oi) =>

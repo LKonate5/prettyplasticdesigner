@@ -43,6 +43,11 @@ export function ControlPanel({
 }) {
   const design = state.present;
   const order = computeOrder(product, schedule, design.wastePct);
+  // Real photos exist for this product? (Only judged once the manifest loaded,
+  // so the note never flashes during startup.)
+  const hasPhotos =
+    textures.size > 0 && [...textures.keys()].some((k) => k.startsWith(`${product.id}/`));
+  const showRenderedNote = textures.size > 0 && !hasPhotos;
   const scene = {
     product,
     layout,
@@ -77,6 +82,7 @@ export function ControlPanel({
         value={design.productId}
         onChange={(productId) => dispatch({ type: 'SET_PRODUCT', productId })}
       />
+      {showRenderedNote && <p className="note">{STR.renderedPreviewNote}</p>}
 
       <DimensionInputs
         product={product}
@@ -117,7 +123,7 @@ export function ControlPanel({
         onReset={() => dispatch({ type: 'RESET', seed: randomSeed() })}
       />
 
-      <SchedulePanel schedule={schedule} product={product} />
+      <SchedulePanel schedule={schedule} />
 
       <QuotePanel
         order={order}

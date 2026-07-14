@@ -17,6 +17,10 @@ export interface Schedule {
   rows: ScheduleRow[];
   totalTiles: number;
   areaM2: number;
+  /** Whole m² to cover the wall — Pretty Plastic ships full square metres only. */
+  roundedAreaM2: number;
+  /** Tiles per m², based on the rounded coverage (replaces the product's nominal figure). */
+  effectiveTilesPerM2: number;
   totalWeightKg: number;
   wallW: number;
   wallH: number;
@@ -45,8 +49,8 @@ export function computeOrder(product: ProductSpec, schedule: Schedule, wastePct:
   const exactM2 = schedule.areaM2;
   // Round the wall coverage up to whole m² FIRST, then add the waste on top and
   // round up again — so "10 m² + 10%" orders 11 m², not 10 (the waste is never
-  // swallowed by rounding).
-  const onWallM2 = Math.ceil(exactM2);
+  // swallowed by rounding). Sourced from the schedule so the two panels can't disagree.
+  const onWallM2 = schedule.roundedAreaM2;
   const toOrderM2 = Math.ceil(onWallM2 * (1 + Math.max(0, wastePct)));
   const kgPerM2 = product.weightKg * product.nominalTilesPerM2;
   return {
@@ -76,6 +80,7 @@ export function computeSchedule(
   }
   const totalTiles = layout.tiles.length;
   const areaM2 = (layout.wallW * layout.wallH) / 1_000_000;
+  const roundedAreaM2 = Math.ceil(areaM2);
   const rows: ScheduleRow[] = [];
   counts.forEach((count, i) => {
     if (count === 0) return;
@@ -90,6 +95,8 @@ export function computeSchedule(
     rows,
     totalTiles,
     areaM2,
+    roundedAreaM2,
+    effectiveTilesPerM2: roundedAreaM2 > 0 ? totalTiles / roundedAreaM2 : 0,
     totalWeightKg: totalTiles * product.weightKg,
     wallW: layout.wallW,
     wallH: layout.wallH,

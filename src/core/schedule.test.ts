@@ -22,6 +22,28 @@ describe('schedule', () => {
     expect(s.rows.reduce((sum, r) => sum + r.pct, 0)).toBeCloseTo(100, 6);
     expect(s.rows.reduce((sum, r) => sum + r.weightKg, 0)).toBeCloseTo(120, 6);
   });
+
+  it('rounds area up to whole square metres and derives effective tiles/m²', () => {
+    const layout = layoutSecondHigh(10, 10); // exactly 9 m²
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
+    expect(s.roundedAreaM2).toBe(9);
+    expect(s.effectiveTilesPerM2).toBeCloseTo(s.totalTiles / 9, 6);
+  });
+
+  it('a 9.1 m² wall rounds up to 10 m²', () => {
+    const layout = layoutSecondHigh(11, 10); // 3.0 × 3.3 = 9.9 m²
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
+    expect(s.roundedAreaM2).toBe(10);
+  });
+
+  it('a tiny wall (1-2 tiles) rounds up to 1 m²', () => {
+    const layout = layoutSecondHigh(1, 1);
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
+    expect(s.roundedAreaM2).toBe(1);
+  });
 });
 
 describe('computeOrder', () => {
@@ -34,6 +56,11 @@ describe('computeOrder', () => {
     expect(order.exactM2).toBeCloseTo(9, 6);
     expect(order.onWallM2).toBe(9); // exactly 9 already whole
     expect(order.toOrderM2).toBe(Math.ceil(9 * 1.1)); // ceil(9.9) = 10
+  });
+
+  it('onWallM2 is sourced from schedule.roundedAreaM2 (single source of truth)', () => {
+    const order = computeOrder(PRODUCTS['second-high'], schedule, 0.1);
+    expect(order.onWallM2).toBe(schedule.roundedAreaM2);
   });
 
   it('adds waste to the ROUNDED coverage (10 m² + 10% = 11)', () => {

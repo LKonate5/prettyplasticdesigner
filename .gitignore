@@ -1,6 +1,9 @@
 node_modules/
 dist/
 samples/
+# raw full-res tile photos (originals stay local; the app ships the
+# downscaled copies in public/textures/ via scripts/import-textures.sh)
+images/
 *.log
 .DS_Store
 *.local

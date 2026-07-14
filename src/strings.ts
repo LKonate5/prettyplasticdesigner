@@ -13,6 +13,8 @@ export const STR = {
   widthM: 'Width (m)',
   heightM: 'Height (m)',
   advancedGrid: 'Set by rows & columns instead',
+  renderedPreviewNote:
+    'Note: this product is shown as a rendered preview — these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
   bond: 'Bond',
   stacked: 'Stacked',
   staggered: 'Staggered',
@@ -68,8 +70,11 @@ export const STR = {
   total: 'Total',
   wall: 'Wall',
   area: 'Area',
+  squareMetres: 'Square metres',
   tilesPerM2: 'tiles/m²',
   scheduleNote: 'Counts include cut edge tiles and exclude site waste — verify before ordering.',
+  fullSqmNote:
+    '* Pretty Plastic produces full square metres only — any part-metre rounds up to the next whole m².',
 
   order: 'Order & quantities',
   waste: 'Waste allowance',

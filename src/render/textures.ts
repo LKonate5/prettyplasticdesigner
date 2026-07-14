@@ -1,78 +1,94 @@
-import { MATERIAL_IDS } from '../data/palette';
-import { PRODUCT_LIST } from '../data/products';
 import type { MaterialId, ProductId } from '../core/types';
 
 /**
- * Real tile texture PNGs are drop-in: put them at
- *   public/textures/{productId}/{colour}-{shade}.png
- * and reload — this module probes all 36 possible files at startup and the
- * renderer uses whichever exist, falling back to flat hex for the rest.
- * (Missing files just 404 quietly during the probe; that's expected.)
+ * Real tile photos. scripts/import-textures.sh drops downscaled JPEGs at
+ *   public/textures/{productId}/{colour}-{shade}-{NN}.jpg
+ * plus manifest.json = { "productId/materialId": variantCount }.
+ *
+ * Each material maps to an ARRAY of photo variants so tiles of one colour can
+ * vary naturally, like the real recycled product. The app loads the manifest
+ * once at startup; products without photos (no manifest entries) fall back to
+ * flat hex rendering and get a "rendered preview" disclaimer in the UI.
  */
 
-export type TextureMap = ReadonlyMap<string, string>; // "productId/materialId" → url
+export type TextureMap = ReadonlyMap<string, readonly string[]>; // "productId/materialId" → variant urls
 
 export const textureKey = (productId: ProductId, materialId: MaterialId): string =>
   `${productId}/${materialId}`;
 
-export function textureUrl(productId: ProductId, materialId: MaterialId): string {
-  return `${import.meta.env.BASE_URL}textures/${productId}/${materialId}.png`;
-}
-
-export async function probeTextures(): Promise<TextureMap> {
-  const map = new Map<string, string>();
-  const probes: Promise<void>[] = [];
-  for (const product of PRODUCT_LIST) {
-    for (const materialId of MATERIAL_IDS) {
-      probes.push(
-        new Promise((resolve) => {
-          const url = textureUrl(product.id, materialId);
-          const img = new Image();
-          img.onload = () => {
-            map.set(textureKey(product.id, materialId), url);
-            resolve();
-          };
-          img.onerror = () => resolve();
-          img.src = url;
-        }),
+export async function loadTextures(): Promise<TextureMap> {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}textures/manifest.json`);
+    if (!res.ok) return new Map();
+    const manifest: Record<string, number> = await res.json();
+    const map = new Map<string, string[]>();
+    for (const [key, count] of Object.entries(manifest)) {
+      if (!Number.isFinite(count) || count < 1) continue;
+      map.set(
+        key,
+        Array.from(
+          { length: count },
+          (_, i) =>
+            `${import.meta.env.BASE_URL}textures/${key}-${String(i + 1).padStart(2, '0')}.jpg`,
+        ),
       );
     }
+    return map;
+  } catch {
+    return new Map(); // no manifest → hex fallback everywhere
   }
-  await Promise.all(probes);
-  return map;
 }
 
 /**
- * Fetch the textures used by a design and return them as data URLs, for
- * inlining into export SVGs. (SVG loaded as an image for PNG export runs in
- * "secure static mode": browsers block ALL external file references, even
- * same-origin ones — inlined data URLs are the only thing that renders.)
+ * Deterministic photo-variant pick for a tile. Keyed on the canonical pattern
+ * position so wrap-partner tiles share the same photo — the wall stays
+ * perfectly tileable even with natural variation.
+ */
+export function variantFor(
+  urls: readonly string[],
+  patternRow: number,
+  patternCol: number,
+): string {
+  const h =
+    (Math.imul(patternRow + 17, 73856093) ^ Math.imul(patternCol + 31, 19349663)) >>> 0;
+  return urls[h % urls.length];
+}
+
+/**
+ * Fetch the photo variants used by a design as data URLs, for inlining into
+ * export SVGs. (SVG loaded as an image for PNG export runs in "secure static
+ * mode": browsers block ALL external file references, even same-origin ones —
+ * inlined data URLs are the only thing that renders.) Order is preserved so
+ * the per-tile variant pick lands on the same photo in exports.
  */
 const dataUrlCache = new Map<string, string>();
+
+async function fetchDataUrl(url: string): Promise<string> {
+  const cached = dataUrlCache.get(url);
+  if (cached) return cached;
+  const blob = await (await fetch(url)).blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  dataUrlCache.set(url, dataUrl);
+  return dataUrl;
+}
 
 export async function texturesAsDataUrls(
   textures: TextureMap,
   productId: ProductId,
   materialIds: MaterialId[],
-): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
+): Promise<Map<string, readonly string[]>> {
+  const out = new Map<string, readonly string[]>();
   await Promise.all(
     materialIds.map(async (mid) => {
       const key = textureKey(productId, mid);
-      const url = textures.get(key);
-      if (!url) return;
-      let dataUrl = dataUrlCache.get(key);
-      if (!dataUrl) {
-        const blob = await (await fetch(url)).blob();
-        dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        dataUrlCache.set(key, dataUrl);
-      }
-      out.set(key, dataUrl);
+      const urls = textures.get(key);
+      if (!urls || urls.length === 0) return;
+      out.set(key, await Promise.all(urls.map(fetchDataUrl)));
     }),
   );
   return out;

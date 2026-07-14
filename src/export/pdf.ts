@@ -112,12 +112,12 @@ function specRows(product: ProductSpec, options: ProductOptions, s: Schedule): s
     ['Product', product.name],
     ['Tile size', `${product.tile.w} × ${product.tile.h} × ${product.tile.d} mm`],
     ['Weight / tile', `${product.weightKg} kg`],
-    ['Coverage', `${product.nominalTilesPerM2} tiles/m²`],
+    ['Coverage', `${s.effectiveTilesPerM2.toFixed(1)} tiles/m²`],
   ];
   if (product.hasBond) rows.push(['Bond', options.bond === 'staggered' ? 'Staggered' : 'Stacked']);
   rows.push(
     ['Wall size', `${mmToM(s.wallW)} × ${mmToM(s.wallH)} m`],
-    ['Area', `${s.areaM2.toFixed(2)} m²`],
+    ['Square metres', `${s.roundedAreaM2} m² (exact: ${s.areaM2.toFixed(2)} m²)`],
     ['Total tiles', String(s.totalTiles)],
     ['Total weight', `${s.totalWeightKg.toFixed(1)} kg`],
   );

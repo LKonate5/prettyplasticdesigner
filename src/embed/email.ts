@@ -15,7 +15,7 @@ export function projectLines(
 ): string[] {
   return [
     `Product: ${product.name} (${product.tile.w}×${product.tile.h}×${product.tile.d} mm)`,
-    `Wall size: ${m(schedule.wallW)} × ${m(schedule.wallH)} m (${schedule.areaM2.toFixed(2)} m²)`,
+    `Wall size: ${m(schedule.wallW)} × ${m(schedule.wallH)} m (${schedule.roundedAreaM2} m²)`,
     design.productId === 'basic-third' ? `Bond: ${design.options.bond}` : '',
     '',
     'Colours used:',

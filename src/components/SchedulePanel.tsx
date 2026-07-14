@@ -1,18 +1,11 @@
 import type { Schedule } from '../core/schedule';
-import type { ProductSpec } from '../core/types';
 import { STR } from '../strings';
 
 /**
  * Quote-ready tile schedule: count, %, and weight per material, plus totals
  * and the wall area. Counts include cut edge tiles (see footnote).
  */
-export function SchedulePanel({
-  schedule,
-  product,
-}: {
-  schedule: Schedule;
-  product: ProductSpec;
-}) {
+export function SchedulePanel({ schedule }: { schedule: Schedule }) {
   return (
     <div className="section">
       <h2>{STR.schedule}</h2>
@@ -45,13 +38,20 @@ export function SchedulePanel({
             <td>100</td>
             <td>{schedule.totalWeightKg.toFixed(1)}</td>
           </tr>
+          <tr>
+            <td>{STR.squareMetres} *</td>
+            <td colSpan={3} style={{ textAlign: 'right' }}>
+              {schedule.roundedAreaM2} m²
+            </td>
+          </tr>
         </tfoot>
       </table>
       <p className="readout" style={{ marginTop: 8 }}>
-        {STR.area}: {schedule.areaM2.toFixed(2)} m² &nbsp;·&nbsp; {product.nominalTilesPerM2}{' '}
+        {STR.area}: {schedule.areaM2.toFixed(2)} m² &nbsp;·&nbsp; {schedule.effectiveTilesPerM2.toFixed(1)}{' '}
         {STR.tilesPerM2}
       </p>
       <p className="note">{STR.scheduleNote}</p>
+      <p className="note">{STR.fullSqmNote}</p>
     </div>
   );
 }
