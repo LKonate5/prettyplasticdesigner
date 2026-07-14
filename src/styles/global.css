@@ -331,6 +331,24 @@ input[type='checkbox'] {
   cursor: crosshair;
 }
 
+.rotate-margin-hit {
+  fill: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.rotate-margin:hover .rotate-margin-hit {
+  fill: rgba(255, 255, 255, 0.28);
+}
+
+.rotate-margin-glyph {
+  font-size: 22px;
+  fill: rgba(255, 255, 255, 0.85);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
 .zoombar {
   position: fixed;
   right: 12px;

@@ -5,6 +5,7 @@ import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
 import { MATERIAL_IDS } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
+import { productPhotoStatus } from '../render/textures';
 import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
 import { DimensionInputs } from './DimensionInputs';
@@ -43,11 +44,8 @@ export function ControlPanel({
 }) {
   const design = state.present;
   const order = computeOrder(product, schedule, design.wastePct);
-  // Real photos exist for this product? (Only judged once the manifest loaded,
-  // so the note never flashes during startup.)
-  const hasPhotos =
-    textures.size > 0 && [...textures.keys()].some((k) => k.startsWith(`${product.id}/`));
-  const showRenderedNote = textures.size > 0 && !hasPhotos;
+  // Only judged once the manifest loaded, so no note flashes during startup.
+  const photoStatus = textures.size > 0 ? productPhotoStatus(textures, product.id) : 'native';
   const scene = {
     product,
     layout,
@@ -56,6 +54,13 @@ export function ControlPanel({
     options: design.options,
     pattern: design.pattern,
   };
+
+  // Only shown as "active" when every tile currently shares one rotation —
+  // once row/column/individual edits diverge, none of the 4 buttons is lit.
+  const facadeRotation =
+    design.cells.length > 0 && design.cells.every((c) => c.rotation === design.cells[0].rotation)
+      ? design.cells[0].rotation
+      : null;
 
   const toggleAllowed = (id: MaterialId) => {
     const has = design.pattern.allowedMaterials.includes(id);
@@ -82,7 +87,8 @@ export function ControlPanel({
         value={design.productId}
         onChange={(productId) => dispatch({ type: 'SET_PRODUCT', productId })}
       />
-      {showRenderedNote && <p className="note">{STR.renderedPreviewNote}</p>}
+      {photoStatus === 'none' && <p className="note">{STR.renderedPreviewNote}</p>}
+      {photoStatus === 'borrowed' && <p className="note">{STR.borrowedPhotoNote}</p>}
 
       <DimensionInputs
         product={product}
@@ -115,9 +121,11 @@ export function ControlPanel({
       <ModeToggle
         product={product}
         mode={state.ui.mode}
+        facadeRotation={facadeRotation}
         canUndo={state.past.length > 0}
         canRedo={state.future.length > 0}
         onMode={(mode) => dispatch({ type: 'SET_MODE', mode })}
+        onFacadeRotation={(rotation) => dispatch({ type: 'SET_FACADE_ROTATION', rotation })}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
         onReset={() => dispatch({ type: 'RESET', seed: randomSeed() })}

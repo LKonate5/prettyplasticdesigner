@@ -118,4 +118,65 @@ describe('app reducer + history', () => {
     const base = s.present.cells[0].rotation;
     expect([0, 90, 180, 270]).toContain(base);
   });
+
+  it('ROTATE_ROW turns every cell in that row and no others, as one undo entry', () => {
+    let s = initialAppState(7);
+    s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
+    s = run(s, { type: 'SET_PATTERN', pattern: { randomRotation: false } }); // uniform baseline
+    const { rows, cols } = s.present;
+    const pastLen = s.past.length;
+    s = run(
+      s,
+      { type: 'STROKE_START' },
+      { type: 'ROTATE_ROW', row: 1, delta: 1 },
+      { type: 'STROKE_END' },
+    );
+    expect(s.past.length).toBe(pastLen + 1);
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const rotation = s.present.cells[row * cols + col].rotation;
+        expect(rotation).toBe(row === 1 ? 90 : 0);
+      }
+    }
+  });
+
+  it('ROTATE_COLUMN turns every cell in that column and no others', () => {
+    let s = initialAppState(7);
+    s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
+    s = run(s, { type: 'SET_PATTERN', pattern: { randomRotation: false } });
+    const { rows, cols } = s.present;
+    s = run(
+      s,
+      { type: 'STROKE_START' },
+      { type: 'ROTATE_COLUMN', col: 2, delta: 1 },
+      { type: 'STROKE_END' },
+    );
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const rotation = s.present.cells[row * cols + col].rotation;
+        expect(rotation).toBe(col === 2 ? 90 : 0);
+      }
+    }
+  });
+
+  it('SET_FACADE_ROTATION sets every cell to the same rotation in one undo entry', () => {
+    let s = initialAppState(7);
+    s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
+    s = run(s, { type: 'SET_PATTERN', pattern: { randomRotation: false } });
+    const pastLen = s.past.length;
+    s = run(s, { type: 'SET_FACADE_ROTATION', rotation: 180 });
+    expect(s.past.length).toBe(pastLen + 1);
+    expect(s.present.cells.every((c) => c.rotation === 180)).toBe(true);
+    s = run(s, { type: 'UNDO' });
+    expect(s.present.cells.every((c) => c.rotation === 0)).toBe(true);
+  });
+
+  it('row/column/facade rotate are no-ops on products without rotation support', () => {
+    let s = initialAppState(7); // default product is 'first-one'
+    const before = s.present;
+    s = run(s, { type: 'ROTATE_ROW', row: 0, delta: 1 });
+    s = run(s, { type: 'ROTATE_COLUMN', col: 0, delta: 1 });
+    s = run(s, { type: 'SET_FACADE_ROTATION', rotation: 90 });
+    expect(s.present).toBe(before);
+  });
 });

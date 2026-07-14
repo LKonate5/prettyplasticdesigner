@@ -140,6 +140,10 @@ function clampExposure(n: number): number {
   return Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, Math.round(n)));
 }
 
+function addRotation(rotation: Rotation, delta: number): Rotation {
+  return ((((rotation + delta * 90) % 360) + 360) % 360) as Rotation;
+}
+
 /**
  * Commit a new present. `kind` marks continuous controls: consecutive commits
  * of the same kind replace the present instead of stacking history entries.
@@ -247,10 +251,39 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'ROTATE_CELL': {
       const cell = p.cells[action.cellIndex];
       if (!cell) return state;
-      const rotation = ((((cell.rotation + action.delta * 90) % 360) + 360) % 360) as Rotation;
       const cells = [...p.cells];
-      cells[action.cellIndex] = { ...cell, rotation };
+      cells[action.cellIndex] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
       return strokeEdit(state, { ...p, cells });
+    }
+
+    // Row/column/facade bulk rotate are second-high only (the only product
+    // with a rotatable facet); the UI gates these controls the same way.
+    case 'ROTATE_ROW': {
+      if (p.productId !== 'second-high') return state;
+      const cells = [...p.cells];
+      for (let col = 0; col < p.cols; col++) {
+        const i = action.row * p.cols + col;
+        const cell = cells[i];
+        if (cell) cells[i] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
+      }
+      return strokeEdit(state, { ...p, cells });
+    }
+
+    case 'ROTATE_COLUMN': {
+      if (p.productId !== 'second-high') return state;
+      const cells = [...p.cells];
+      for (let row = 0; row < p.rows; row++) {
+        const i = row * p.cols + action.col;
+        const cell = cells[i];
+        if (cell) cells[i] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
+      }
+      return strokeEdit(state, { ...p, cells });
+    }
+
+    case 'SET_FACADE_ROTATION': {
+      if (p.productId !== 'second-high') return state;
+      const cells = p.cells.map((cell) => ({ ...cell, rotation: action.rotation }));
+      return commit(state, { ...p, cells });
     }
 
     case 'STROKE_END':

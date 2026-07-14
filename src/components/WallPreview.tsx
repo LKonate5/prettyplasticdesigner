@@ -53,10 +53,10 @@ export function WallPreview({
   const containerRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{
     painting: boolean;
-    lastCell: number;
+    lastKey: string;
     back: boolean;
     endPaint: (() => void) | null;
-  }>({ painting: false, lastCell: -1, back: false, endPaint: null });
+  }>({ painting: false, lastKey: '', back: false, endPaint: null });
   const scaleRef = useRef(0.2); // current px-per-mm, for the pan handler
   const pointers = useRef(new Map<number, { x: number; y: number }>()); // active touch points
 
@@ -83,15 +83,37 @@ export function WallPreview({
   }, []);
 
   const applyAt = (target: Element | null) => {
+    const delta = gesture.current.back ? -1 : 1;
+    if (mode === 'rotate') {
+      const rowEl = target?.closest?.('[data-row]');
+      if (rowEl) {
+        const row = Number(rowEl.getAttribute('data-row'));
+        const key = `row:${row}`;
+        if (key === gesture.current.lastKey) return;
+        gesture.current.lastKey = key;
+        dispatch({ type: 'ROTATE_ROW', row, delta });
+        return;
+      }
+      const colEl = target?.closest?.('[data-col]');
+      if (colEl) {
+        const col = Number(colEl.getAttribute('data-col'));
+        const key = `col:${col}`;
+        if (key === gesture.current.lastKey) return;
+        gesture.current.lastKey = key;
+        dispatch({ type: 'ROTATE_COLUMN', col, delta });
+        return;
+      }
+    }
     const el = target?.closest?.('[data-cell]');
     if (!el) return;
     const cellIndex = Number(el.getAttribute('data-cell'));
-    if (cellIndex === gesture.current.lastCell) return;
-    gesture.current.lastCell = cellIndex;
+    const key = `cell:${cellIndex}`;
+    if (key === gesture.current.lastKey) return;
+    gesture.current.lastKey = key;
     if (mode === 'paint') {
       dispatch({ type: 'PAINT_CELL', cellIndex, material: materialIndex(brush) });
     } else {
-      dispatch({ type: 'ROTATE_CELL', cellIndex, delta: gesture.current.back ? -1 : 1 });
+      dispatch({ type: 'ROTATE_CELL', cellIndex, delta });
     }
   };
 
@@ -125,7 +147,7 @@ export function WallPreview({
   const startPaint = (e: ReactPointerEvent) => {
     e.preventDefault();
     gesture.current.painting = true;
-    gesture.current.lastCell = -1;
+    gesture.current.lastKey = '';
     gesture.current.back = e.shiftKey;
     dispatch({ type: 'STROKE_START' });
     applyAt(e.target as Element);
@@ -200,7 +222,11 @@ export function WallPreview({
       }
     }
     if (e.button !== 0) return;
-    if (!(e.target as Element).closest?.('[data-cell]')) return;
+    const target = e.target as Element;
+    const targetable =
+      target.closest?.('[data-cell]') ||
+      (mode === 'rotate' && (target.closest?.('[data-row]') || target.closest?.('[data-col]')));
+    if (!targetable) return;
     startPaint(e);
   };
 
@@ -259,6 +285,7 @@ export function WallPreview({
         view={view}
         tileOffsets={offsets}
         frame
+        rotateMargins={mode === 'rotate' && product.supportsRotation}
       />
       <div className="zoombar">
         <button onClick={() => setZoomFactor((z) => clampZoom(z / 1.25))} title={STR.zoomOut}>

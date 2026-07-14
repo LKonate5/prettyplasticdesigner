@@ -1,5 +1,7 @@
-import type { ProductSpec } from '../core/types';
+import type { ProductSpec, Rotation } from '../core/types';
 import { STR } from '../strings';
+
+const FACADE_ROTATIONS: Rotation[] = [0, 90, 180, 270];
 
 /**
  * Tools row: paint/rotate mode (rotate only for products that support it),
@@ -8,18 +10,22 @@ import { STR } from '../strings';
 export function ModeToggle({
   product,
   mode,
+  facadeRotation,
   canUndo,
   canRedo,
   onMode,
+  onFacadeRotation,
   onUndo,
   onRedo,
   onReset,
 }: {
   product: ProductSpec;
   mode: 'paint' | 'rotate';
+  facadeRotation: Rotation | null;
   canUndo: boolean;
   canRedo: boolean;
   onMode: (mode: 'paint' | 'rotate') => void;
+  onFacadeRotation: (rotation: Rotation) => void;
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
@@ -37,7 +43,24 @@ export function ModeToggle({
               {STR.rotate}
             </button>
           </div>
-          {mode === 'rotate' && <p className="note">{STR.rotateHint}</p>}
+          {mode === 'rotate' && (
+            <>
+              <p className="note">{STR.rotateHint}</p>
+              <label>{STR.facadeRotation}</label>
+              <div className="seg">
+                {FACADE_ROTATIONS.map((r) => (
+                  <button
+                    key={r}
+                    className={facadeRotation === r ? 'active' : ''}
+                    onClick={() => onFacadeRotation(r)}
+                  >
+                    {r}°
+                  </button>
+                ))}
+              </div>
+              <p className="note">{STR.facadeRotationHint}</p>
+            </>
+          )}
         </div>
       )}
       <div className="row">

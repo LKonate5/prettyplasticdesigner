@@ -71,4 +71,14 @@ describe('First One layout', () => {
     expect(layoutFirstOne(4, 3).torusPeriod).toEqual({ w: 3 * 304, h: 4 * FO_ROW_PITCH });
     expect(layoutFirstOne(5, 3).torusPeriod).toBeNull();
   });
+
+  it('interior tiles get 4 nested lap-shadow bands on each of their 2 upper edges', () => {
+    const l = layoutFirstOne(8, 6);
+    const interior = l.tiles.filter((t) => !t.cut);
+    expect(interior.length).toBeGreaterThan(0);
+    for (const t of interior) {
+      expect(t.shadowStrips.length).toBe(8); // 4 depths × 2 edges, all uncut
+      for (const strip of t.shadowStrips) expect(strip.length).toBe(4); // each band is a quad
+    }
+  });
 });

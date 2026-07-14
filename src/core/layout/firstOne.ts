@@ -22,7 +22,10 @@ import { clipPolygonToRect, insetQuad, polygonsDiffer } from '../geometry';
 export const FO_PITCH_X = 304;
 export const FO_ROW_PITCH = 1_000_000 / (22.2 * FO_PITCH_X); // ≈ 148.174 mm
 const HALF = FO_PITCH_X / 2;
-const SHADOW_W = 7;
+// Nested bands of the SAME translucent fill, narrowest closest to the true lap
+// edge: rendered stacked, alpha compositing turns this into a soft falloff
+// (a single flat 7 mm stripe read as too thin/flat once real photos landed).
+const SHADOW_DEPTHS = [12, 8, 5, 2];
 
 function diamond(cx: number, cy: number): Pt[] {
   return [
@@ -31,6 +34,11 @@ function diamond(cx: number, cy: number): Pt[] {
     [cx, cy + FO_ROW_PITCH],
     [cx - HALF, cy],
   ];
+}
+
+/** The nested lap-shadow bands along one edge (see SHADOW_DEPTHS). */
+function lapShadowBands(a: Pt, b: Pt, towards: Pt): Pt[][] {
+  return SHADOW_DEPTHS.map((depth) => insetQuad(a, b, depth, towards));
 }
 
 /** Column x-centres for a diamond row: alternate rows are offset by half a tile. */
@@ -76,10 +84,7 @@ export function layoutFirstOne(rows: number, cols: number): Layout {
       const top: Pt = [cx(c), cy - RP];
       const right: Pt = [cx(c) + HALF, cy];
       const shadowStrips: Pt[][] = [];
-      for (const quad of [
-        insetQuad(left, top, SHADOW_W, centre),
-        insetQuad(top, right, SHADOW_W, centre),
-      ]) {
+      for (const quad of [...lapShadowBands(left, top, centre), ...lapShadowBands(top, right, centre)]) {
         const q = clipPolygonToRect(quad, 0, 0, wallW, wallH);
         if (q.length >= 3) shadowStrips.push(q);
       }

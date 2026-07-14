@@ -16,6 +16,50 @@ export type TextureMap = ReadonlyMap<string, readonly string[]>; // "productId/m
 export const textureKey = (productId: ProductId, materialId: MaterialId): string =>
   `${productId}/${materialId}`;
 
+/**
+ * Products that share Pretty Plastic's recycled-PVC material with another
+ * product but do not have their own photography yet: fall back to the sibling
+ * product's photos in the same colour/shade, so the preview shows the real
+ * marble/flame finish instead of a flat swatch. Remove an entry here once that
+ * product gets its own photos in the manifest (native photos always win).
+ */
+const PHOTO_FALLBACK: Partial<Record<ProductId, ProductId>> = {
+  'basic-third': 'first-one',
+};
+
+export interface ResolvedTexture {
+  urls: readonly string[];
+  /** False when these are borrowed from PHOTO_FALLBACK rather than the product's own photos. */
+  native: boolean;
+}
+
+export function resolveTexture(
+  textures: TextureMap,
+  productId: ProductId,
+  materialId: MaterialId,
+): ResolvedTexture | null {
+  const own = textures.get(textureKey(productId, materialId));
+  if (own && own.length > 0) return { urls: own, native: true };
+  const fallbackProduct = PHOTO_FALLBACK[productId];
+  if (fallbackProduct) {
+    const borrowed = textures.get(textureKey(fallbackProduct, materialId));
+    if (borrowed && borrowed.length > 0) return { urls: borrowed, native: false };
+  }
+  return null;
+}
+
+/** Whether `productId` currently shows its own photos, borrowed ones, or none (flat hex). */
+export function productPhotoStatus(
+  textures: TextureMap,
+  productId: ProductId,
+): 'native' | 'borrowed' | 'none' {
+  const has = (id: ProductId) => [...textures.keys()].some((k) => k.startsWith(`${id}/`));
+  if (has(productId)) return 'native';
+  const fallback = PHOTO_FALLBACK[productId];
+  if (fallback && has(fallback)) return 'borrowed';
+  return 'none';
+}
+
 export async function loadTextures(): Promise<TextureMap> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}textures/manifest.json`);

@@ -2,7 +2,7 @@ import type { Cell, Layout, ProductSpec } from '../core/types';
 import { materialAt } from '../data/palette';
 import { SceneDefs } from './defs';
 import type { TextureMap } from './textures';
-import { textureKey, variantFor } from './textures';
+import { resolveTexture, variantFor } from './textures';
 import { TileShape } from './TileShape';
 
 /**
@@ -42,8 +42,12 @@ interface WallSceneProps {
   tileOffsets?: ReadonlyArray<readonly [number, number]>;
   /** Draw the wall boundary outline and dim the fill outside it. */
   frame?: boolean;
+  /** Second High only: draw clickable row/column margins for bulk rotate. */
+  rotateMargins?: boolean;
   preserveAspectRatio?: string;
 }
+
+const MARGIN_BAND = 40; // mm — width of the clickable row/column rotate strip
 
 export function WallScene({
   layout,
@@ -55,27 +59,26 @@ export function WallScene({
   view,
   tileOffsets,
   frame,
+  rotateMargins,
   preserveAspectRatio = 'xMidYMid meet',
 }: WallSceneProps) {
   const { wallW, wallH } = layout;
   const v: ViewBox = view ?? { x: 0, y: 0, w: wallW, h: wallH };
   const offsets = tileOffsets ?? [[0, 0]];
+  const margins = rotateMargins ? marginBounds(layout) : null;
 
   const tiles = layout.tiles.map((tile, i) => {
     const cell = cells[tile.cellIndex];
     const material = materialAt(cell?.material ?? 0);
-    const variants = textures.get(textureKey(product.id, material.id));
+    const resolved = resolveTexture(textures, product.id, material.id);
     return (
       <TileShape
         key={i}
         tile={tile}
         material={material}
         rotation={cell?.rotation ?? 0}
-        texUrl={
-          variants && variants.length > 0
-            ? variantFor(variants, tile.patternRow, tile.patternCol)
-            : null
-        }
+        texUrl={resolved ? variantFor(resolved.urls, tile.patternRow, tile.patternCol) : null}
+        texBorrowed={resolved ? !resolved.native : false}
         productId={product.id}
       />
     );
@@ -132,6 +135,71 @@ export function WallScene({
           />
         </g>
       )}
+      {margins && (
+        <g className="rotate-margins">
+          {margins.rows.map(({ index, minY, maxY }) => (
+            <g key={`row-${index}`} data-row={index} className="rotate-margin">
+              <rect
+                x={-MARGIN_BAND}
+                y={minY}
+                width={MARGIN_BAND}
+                height={maxY - minY}
+                className="rotate-margin-hit"
+              />
+              <text
+                x={-MARGIN_BAND / 2}
+                y={(minY + maxY) / 2}
+                className="rotate-margin-glyph"
+                pointerEvents="none"
+              >
+                ↻
+              </text>
+            </g>
+          ))}
+          {margins.cols.map(({ index, minX, maxX }) => (
+            <g key={`col-${index}`} data-col={index} className="rotate-margin">
+              <rect
+                x={minX}
+                y={-MARGIN_BAND}
+                width={maxX - minX}
+                height={MARGIN_BAND}
+                className="rotate-margin-hit"
+              />
+              <text
+                x={(minX + maxX) / 2}
+                y={-MARGIN_BAND / 2}
+                className="rotate-margin-glyph"
+                pointerEvents="none"
+              >
+                ↻
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
     </svg>
   );
+}
+
+/** Per-row/column pixel bounds (mm), derived from the tile polygons so any
+ * grid geometry works without duplicating layout-specific pitch math. */
+function marginBounds(layout: Layout) {
+  const rows = new Map<number, { minY: number; maxY: number }>();
+  const cols = new Map<number, { minX: number; maxX: number }>();
+  for (const tile of layout.tiles) {
+    const xs = tile.polygon.map((p) => p[0]);
+    const ys = tile.polygon.map((p) => p[1]);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const r = rows.get(tile.row);
+    rows.set(tile.row, r ? { minY: Math.min(r.minY, minY), maxY: Math.max(r.maxY, maxY) } : { minY, maxY });
+    const c = cols.get(tile.col);
+    cols.set(tile.col, c ? { minX: Math.min(c.minX, minX), maxX: Math.max(c.maxX, maxX) } : { minX, maxX });
+  }
+  return {
+    rows: [...rows.entries()].map(([index, b]) => ({ index, ...b })),
+    cols: [...cols.entries()].map(([index, b]) => ({ index, ...b })),
+  };
 }

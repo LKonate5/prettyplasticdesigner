@@ -15,6 +15,8 @@ export const STR = {
   advancedGrid: 'Set by rows & columns instead',
   renderedPreviewNote:
     'Note: this product is shown as a rendered preview — these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
+  borrowedPhotoNote:
+    'Note: Basic Third does not yet have its own tile photos, so this preview borrows First One photography in matching colours and shades — both are made from the same recycled material. The real Basic Third tiles will show their own three-band relief pattern.',
   bond: 'Bond',
   stacked: 'Stacked',
   staggered: 'Staggered',
@@ -62,6 +64,9 @@ export const STR = {
   redoHint: 'Re-apply a change you just undid. Also ⇧⌘/Ctrl+Z.',
   resetHint: 'Clear everything and start over with a fresh random design.',
   toolsHint: 'Undo / Redo step through your changes; Reset starts a brand-new design.',
+  facadeRotation: 'Facade orientation',
+  facadeRotationHint:
+    'Sets every tile to face the same way (0° = raised corner faces north). Click a row or column margin next to the wall to turn just that row or column.',
 
   schedule: 'Tile schedule',
   material: 'Material',

@@ -9,7 +9,11 @@ const fmt = (n: number): string => {
 export const pointsAttr = (poly: Pt[]): string =>
   poly.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(' ');
 
-const SHADOW_FILL = 'rgba(0,0,0,0.18)';
+// Shared by every product's shadowStrips (Basic Third's single lap band,
+// First One's nested ones — see lapShadowBands in layout/firstOne.ts). First
+// One stacks several bands of this same fill via normal alpha compositing, so
+// its lap reads as a soft falloff rather than one flat stripe.
+const SHADOW_FILL = 'rgba(0,0,0,0.14)';
 
 // First One photo placement (photos are ~1785×2400: the full 304×400 mm
 // physical diamond incl. its hidden top lap, on a backdrop). The image is
@@ -19,12 +23,61 @@ const FO_IMG_W = 316; // 304 mm × ~4% overscan
 const FO_IMG_H = FO_IMG_W * (2400 / 1785);
 const FO_IMG_BOTTOM = 154; // rhombus bottom vertex ≈ +148.2, plus a little bleed
 
+// Borrowed First One photos (used by Basic Third until it has its own — see
+// PHOTO_FALLBACK in textures.ts) are diamond-on-backdrop frames: converting
+// them to JPEG flattened the transparent corners to WHITE. A plain rectangular
+// crop of the full frame could show that white background, so instead we
+// sample only the centre of the frame — the Sutherland–Hodgman-style inscribed
+// rectangle of a rhombus that fills its bounding box tops out at the centre
+// 50%; we use a smaller 40% for a comfortable margin — which stays entirely
+// inside the marble surface regardless of tile shape or aspect ratio.
+const BORROWED_SRC_W = 1785;
+const BORROWED_SRC_H = 2400;
+const BORROWED_CROP_INSET = 0.3; // keep the centre (1 − 2×0.3) = 40% on each axis
+
+function BorrowedPhotoFill({
+  href,
+  x,
+  y,
+  w,
+  h,
+}: {
+  href: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}) {
+  const cropW = BORROWED_SRC_W * (1 - 2 * BORROWED_CROP_INSET);
+  const cropH = BORROWED_SRC_H * (1 - 2 * BORROWED_CROP_INSET);
+  return (
+    <svg
+      x={x}
+      y={y}
+      width={w}
+      height={h}
+      viewBox={`0 0 ${cropW} ${cropH}`}
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <image
+        href={href}
+        x={-BORROWED_SRC_W * BORROWED_CROP_INSET}
+        y={-BORROWED_SRC_H * BORROWED_CROP_INSET}
+        width={BORROWED_SRC_W}
+        height={BORROWED_SRC_H}
+      />
+    </svg>
+  );
+}
+
 interface TileShapeProps {
   tile: Tile;
   material: Material;
   rotation: Rotation;
   /** Photo variant URL for this tile, or null → flat hex fill. */
   texUrl: string | null;
+  /** True when texUrl is borrowed from a sibling product's photos (see PHOTO_FALLBACK). */
+  texBorrowed: boolean;
   productId: string;
 }
 
@@ -35,14 +88,17 @@ interface TileShapeProps {
  *
  * With a real photo: Second High draws the square photo directly (rotating
  * with the tile); First One draws the diamond photo clipped to the shared
- * #pp-diamond rhombus; Basic Third (when photos arrive) covers its rect.
- * Without: hex fill + the procedural facet/band overlays.
+ * #pp-diamond rhombus. Basic Third covers its rect with either its own future
+ * photos (full-frame, like Second High) or — for now — a safe centre-crop of
+ * First One's borrowed photos (BorrowedPhotoFill). Without a photo: hex fill +
+ * the procedural facet/band overlays.
  */
 export const TileShape = memo(function TileShape({
   tile,
   material,
   rotation,
   texUrl,
+  texBorrowed,
   productId,
 }: TileShapeProps) {
   const [x, y] = tile.polygon[0];
@@ -82,7 +138,9 @@ export const TileShape = memo(function TileShape({
   } else if (texUrl && productId === 'basic-third') {
     const w = tile.polygon[1][0] - tile.polygon[0][0];
     const h = tile.polygon[2][1] - tile.polygon[1][1];
-    content = (
+    content = texBorrowed ? (
+      <BorrowedPhotoFill href={texUrl} x={x} y={y} w={w} h={h} />
+    ) : (
       <image href={texUrl} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" />
     );
   } else {
