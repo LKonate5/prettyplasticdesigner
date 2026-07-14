@@ -43,7 +43,7 @@ export function usedMaterialIds(cells: readonly Cell[]): MaterialId[] {
  * true real-world size.
  */
 export async function buildSceneSvg(
-  { product, layout, cells, textures }: SceneInput,
+  { product, layout, cells, textures, pattern }: SceneInput,
   opts: { mm?: boolean } = {},
 ): Promise<string> {
   const dataUrls = await texturesAsDataUrls(textures, product.id, usedMaterialIds(cells));
@@ -56,6 +56,8 @@ export async function buildSceneSvg(
       cells,
       product,
       textures: inlineTextures,
+      // Same seed as the screen, so the export lands on the same photo per tile.
+      seed: pattern.seed,
       width: mm ? `${round(layout.wallW)}mm` : undefined,
       height: mm ? `${round(layout.wallH)}mm` : undefined,
     }),

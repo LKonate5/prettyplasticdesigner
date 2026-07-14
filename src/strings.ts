@@ -37,7 +37,6 @@ export const STR = {
   variation: 'Variation',
   variationHint: 'Note this code to come back to a look you like, or type one in.',
   reroll: 'Shuffle',
-  randomRotation: 'Mix tile rotations',
   baseColour: 'Base colour',
 
   palette: 'Colours & shades',
@@ -54,9 +53,6 @@ export const STR = {
   allowAll: 'Use all',
 
   tools: 'Tools',
-  paint: 'Paint',
-  rotate: 'Rotate',
-  rotateHint: 'Click a tile to turn it 90°. Hold Shift to turn it back.',
   undo: 'Undo',
   redo: 'Redo',
   reset: 'Reset',
@@ -64,9 +60,6 @@ export const STR = {
   redoHint: 'Re-apply a change you just undid. Also ⇧⌘/Ctrl+Z.',
   resetHint: 'Clear everything and start over with a fresh random design.',
   toolsHint: 'Undo / Redo step through your changes; Reset starts a brand-new design.',
-  facadeRotation: 'Facade orientation',
-  facadeRotationHint:
-    'Sets every tile to face the same way (0° = raised corner faces north). Click a row or column margin next to the wall to turn just that row or column.',
 
   schedule: 'Tile schedule',
   material: 'Material',
@@ -92,7 +85,9 @@ export const STR = {
 
   requestSample: 'Request a sample',
   requestQuote: 'Request a quote',
-  requestHint: 'Opens a pre-filled email to Pretty Plastic. The quote also downloads your wall image to attach.',
+  requestHint: 'Sends your design straight to Pretty Plastic. The quote also attaches an image of your wall.',
+  emailSent: 'Sent! Pretty Plastic will be in touch.',
+  emailFallback: 'Could not send directly, so we opened your email app instead — just hit send there.',
   quoteImageNote: 'Wall image downloaded — please attach it to this email.',
 
   capNotice: 'That size would exceed 5,000 tiles — reduce rows or columns.',
@@ -110,4 +105,21 @@ export const STR = {
   copyLink: 'Copy link',
   copied: 'Link copied',
   shareHint: 'Copies a link that reopens this exact design.',
+
+  exportLeadTitle: 'Before you continue',
+  exportLeadHint: "Tell us who you are so Pretty Plastic can follow up. You'll only need to do this once.",
+  firstName: 'First name',
+  lastName: 'Last name',
+  contactEmail: 'Email',
+  company: 'Company',
+  exportLeadSubmit: 'Continue',
+  exportLeadCancel: 'Cancel',
+  exportLeadRequired: 'Please fill in every field.',
+  exportLeadInvalidEmail: 'Please enter a valid email address.',
+
+  emailPreviewTitle: 'Review your message',
+  emailPreviewHint: "Edit anything you'd like, or just send it as is.",
+  emailPreviewSubject: 'Subject',
+  emailPreviewBody: 'Message',
+  emailPreviewSend: 'Send',
 };

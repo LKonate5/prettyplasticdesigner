@@ -107,6 +107,7 @@ button {
 
 input[type='number'],
 input[type='text'],
+input[type='email'],
 select {
   width: 100%;
   padding: 6px 8px;
@@ -417,6 +418,51 @@ table.schedule {
   color: #b3402a;
   font-size: 12px;
   margin-top: 6px;
+}
+
+/* ---- modal (lead capture) ---- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+
+.modal-card {
+  background: var(--pp-panel);
+  border-radius: var(--pp-radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-card h3 {
+  margin: 0 0 4px;
+}
+
+.modal-card .note {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.modal-card-wide {
+  max-width: 480px;
+}
+
+.modal-card textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--pp-border);
+  border-radius: var(--pp-radius);
+  background: #fff;
+  font: inherit;
+  resize: vertical;
 }
 
 /* ---- responsive drawer (the tool lives inside an iframe embed) ---- */

@@ -1,7 +1,7 @@
 import { computeLayout } from '../core/layout';
 import { generatePattern } from '../core/pattern/generators';
 import { DEFAULT_WASTE, type DesignState } from '../core/state/reducer';
-import type { Cell, MaterialId, PatternType, ProductId, Rotation } from '../core/types';
+import type { Cell, MaterialId, PatternType, ProductId } from '../core/types';
 import { materialAt, materialIndex, MATERIAL_IDS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
 
@@ -10,6 +10,11 @@ import { PRODUCTS } from '../data/products';
  * live in the page URL and be shared. We store the settings + only the
  * hand-painted cells that DIFFER from what the pattern would generate, so the
  * string stays small (a fresh auto-generated design carries no overrides).
+ *
+ * Back-compat: links minted before tile rotation was retired carry an `rr`
+ * flag and 3-element overrides ([cellIndex, material, rotation]). Both are read
+ * and discarded, so an old link still reopens — minus the rotations, which the
+ * renderer no longer honours anyway.
  */
 
 interface Packed {
@@ -26,9 +31,8 @@ interface Packed {
   gd: 'horizontal' | 'vertical' | 'diagonal';
   sdir: 'horizontal' | 'vertical';
   sw: number; // stripe width
-  rr: 0 | 1; // randomRotation
   w: number; // waste fraction
-  o: [number, number, number][]; // overrides: [cellIndex, material, rotation]
+  o: [number, number][]; // overrides: [cellIndex, material]
 }
 
 const PRODUCT_IDS: ProductId[] = ['first-one', 'second-high', 'basic-third'];
@@ -45,12 +49,10 @@ function baselineCells(design: DesignState): Cell[] {
 
 export function encodeDesign(design: DesignState): string {
   const base = baselineCells(design);
-  const overrides: [number, number, number][] = [];
+  const overrides: [number, number][] = [];
   design.cells.forEach((cell, i) => {
     const b = base[i];
-    if (!b || b.material !== cell.material || b.rotation !== cell.rotation) {
-      overrides.push([i, cell.material, cell.rotation]);
-    }
+    if (!b || b.material !== cell.material) overrides.push([i, cell.material]);
   });
   const packed: Packed = {
     p: design.productId,
@@ -66,7 +68,6 @@ export function encodeDesign(design: DesignState): string {
     gd: design.pattern.gradient.direction,
     sdir: design.pattern.stripes.direction,
     sw: design.pattern.stripes.width,
-    rr: design.pattern.randomRotation ? 1 : 0,
     w: design.wastePct,
     o: overrides,
   };
@@ -93,15 +94,15 @@ export function decodeDesign(str: string): DesignState | null {
         solidMaterial: asMaterial(packed.sm),
         gradient: { direction: packed.gd },
         stripes: { direction: packed.sdir, width: packed.sw },
-        randomRotation: packed.rr === 1,
       },
       cells: [],
       wastePct: typeof packed.w === 'number' ? packed.w : DEFAULT_WASTE,
     };
-    // regenerate the baseline, then apply the hand-painted overrides
+    // regenerate the baseline, then apply the hand-painted overrides. Old links
+    // carry a third element (rotation) — destructuring simply ignores it.
     design.cells = baselineCells(design);
-    for (const [i, material, rotation] of packed.o ?? []) {
-      if (design.cells[i]) design.cells[i] = { material, rotation: rotation as Rotation };
+    for (const [i, material] of packed.o ?? []) {
+      if (design.cells[i]) design.cells[i] = { material };
     }
     return design;
   } catch {

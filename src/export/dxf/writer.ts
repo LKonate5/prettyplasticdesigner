@@ -1,3 +1,4 @@
+import { SH_FACET } from '../../core/layout/secondHigh';
 import type { Cell, Layout, Pt, ProductSpec } from '../../core/types';
 import { materialAt, materialIndex } from '../../data/palette';
 import { usedMaterialIds } from '../svg';
@@ -163,11 +164,12 @@ function writeEntities(
     const material = materialAt(cells[tile.cellIndex]?.material ?? 0);
     lwpolyline(b, tile.exportPolygon.map(flipY), material.dxfLayer, hexToInt(material.hex), true);
 
-    // Second High: emit the facet apex "V" so tile orientation survives in CAD.
+    // Second High: emit the facet apex "V" so the relief survives in CAD. Every
+    // tile is laid the same way up (see Cell in core/types.ts), so this is the
+    // one canonical orientation — no per-tile transform.
     if (product.id === 'second-high') {
       const [x, y] = tile.polygon[0];
-      const apex = facetApex(x, y, cells[tile.cellIndex]?.rotation ?? 0);
-      lwpolyline(b, apex.map(flipY), 'PP_FACETS', undefined, false);
+      lwpolyline(b, facetApex(x, y).map(flipY), 'PP_FACETS', undefined, false);
     }
   }
 
@@ -216,25 +218,13 @@ function writeObjects(b: DxfBuilder): void {
 }
 
 // --- facet apex geometry (matches the on-screen motif in render/defs.tsx) ---
-function facetApex(x: number, y: number, rotation: number): Pt[] {
-  const s = 294;
-  const ax = 182.28;
-  const ay = 111.72;
-  const corners: Pt[] = [
-    [0, 0],
-    [s, 0],
-    [ax, ay],
+function facetApex(x: number, y: number): Pt[] {
+  const { size, ax, ay } = SH_FACET;
+  return [
+    [x, y],
+    [x + size, y],
+    [x + ax, y + ay],
   ];
-  const rad = (rotation * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const cx = s / 2;
-  const cy = s / 2;
-  return corners.map(([px, py]) => {
-    const dx = px - cx;
-    const dy = py - cy;
-    return [x + cx + dx * cos - dy * sin, y + cy + dx * sin + dy * cos] as Pt;
-  });
 }
 
 function hexToInt(hex: string): number {

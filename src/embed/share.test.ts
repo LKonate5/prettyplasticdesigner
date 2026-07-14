@@ -12,13 +12,47 @@ describe('share encode/decode', () => {
   it('round-trips hand-painted overrides', () => {
     const design = initialDesign('second-high', 999);
     // paint a few cells to differ from the generated pattern
-    design.cells[0] = { material: 5, rotation: 90 };
-    design.cells[3] = { material: 11, rotation: 0 };
+    design.cells[0] = { material: 5 };
+    design.cells[3] = { material: 11 };
     const decoded = decodeDesign(encodeDesign(design));
     expect(decoded).not.toBeNull();
-    expect(decoded!.cells[0]).toEqual({ material: 5, rotation: 90 });
-    expect(decoded!.cells[3]).toEqual({ material: 11, rotation: 0 });
+    expect(decoded!.cells[0]).toEqual({ material: 5 });
+    expect(decoded!.cells[3]).toEqual({ material: 11 });
     expect(decoded!.cells).toEqual(design.cells);
+  });
+
+  // Links minted before tile rotation was retired carry an `rr` flag and a
+  // third element on each override. They must still reopen — the rotation is
+  // simply dropped, since no tile is ever turned now.
+  it('still opens a link from before rotation was retired', () => {
+    const legacy = {
+      p: 'second-high',
+      r: 10,
+      c: 10,
+      e: 450,
+      b: 1,
+      t: 'random',
+      s: 999,
+      tv: 0.35,
+      sm: 0,
+      am: [0, 1, 2],
+      gd: 'vertical',
+      sdir: 'horizontal',
+      sw: 2,
+      rr: 1, // randomRotation — no longer a thing
+      w: 0.1,
+      o: [[0, 5, 90], [3, 11, 270]], // [cellIndex, material, rotation]
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(legacy))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const decoded = decodeDesign(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.productId).toBe('second-high');
+    // the painted colours survive; the rotations are gone
+    expect(decoded!.cells[0]).toEqual({ material: 5 });
+    expect(decoded!.cells[3]).toEqual({ material: 11 });
   });
 
   it('carries product, size, options and pattern settings', () => {

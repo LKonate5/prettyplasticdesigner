@@ -3,9 +3,11 @@ import type { Layout, Pt, Tile } from '../types';
 /**
  * SECOND HIGH — square faceted tile, 294 × 294 mm, on a 300 mm grid
  * (the published 11.1 tiles/m² ⇒ 1 / 0.3² pitch). The 6 mm gap between tiles
- * reads as a dark shadow joint over the wall background. No laps, no cuts —
- * the design comes from mixing per-tile rotations of the asymmetric facet
- * surface, so the renderer draws a rotatable facet motif on every tile.
+ * reads as a dark shadow joint over the wall background. No laps, no cuts.
+ *
+ * Every tile is laid the same way up: the relief wedge protrudes in one fixed
+ * direction, exactly as photographed. See Cell in core/types.ts for why tiles
+ * are never turned.
  *
  * The plain grid is already exactly one seamless period, so patternRow/Col are
  * just the grid indices and there are no wrap partners.
@@ -14,6 +16,14 @@ import type { Layout, Pt, Tile } from '../types';
 export const SH_PITCH = 300;
 const TILE = 294;
 const MARGIN = (SH_PITCH - TILE) / 2; // 3 mm each side
+
+/**
+ * The asymmetric facet surface, in tile-local mm from the top-left corner: the
+ * ridge runs from the two top corners down to an off-centre apex. Shared by the
+ * on-screen motif (render/defs.tsx) and the DXF facet lines (export/dxf), which
+ * must not drift apart.
+ */
+export const SH_FACET = { size: TILE, ax: 182.28, ay: 111.72 } as const;
 
 export function layoutSecondHigh(rows: number, cols: number): Layout {
   const wallW = cols * SH_PITCH;
@@ -42,6 +52,7 @@ export function layoutSecondHigh(rows: number, cols: number): Layout {
         zIndex: row,
         cut: false,
         shadowStrips: [],
+        lipStrips: [], // flat grid, no laps
       });
     }
   }

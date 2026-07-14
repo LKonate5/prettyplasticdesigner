@@ -1,3 +1,4 @@
+import { cellRng } from '../core/pattern/prng';
 import type { MaterialId, ProductId } from '../core/types';
 
 /**
@@ -6,9 +7,13 @@ import type { MaterialId, ProductId } from '../core/types';
  * plus manifest.json = { "productId/materialId": variantCount }.
  *
  * Each material maps to an ARRAY of photo variants so tiles of one colour can
- * vary naturally, like the real recycled product. The app loads the manifest
- * once at startup; products without photos (no manifest entries) fall back to
- * flat hex rendering and get a "rendered preview" disclaimer in the UI.
+ * vary naturally, like the real recycled product. Since tiles are never rotated
+ * (see Cell in core/types.ts), the photo variant is the ONLY thing that keeps
+ * same-coloured neighbours from being identical — so it has to spread well.
+ *
+ * The app loads the manifest once at startup; products without photos (no
+ * manifest entries) fall back to flat hex rendering and get a "rendered
+ * preview" disclaimer in the UI.
  */
 
 export type TextureMap = ReadonlyMap<string, readonly string[]>; // "productId/materialId" → variant urls
@@ -83,19 +88,64 @@ export async function loadTextures(): Promise<TextureMap> {
   }
 }
 
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
 /**
- * Deterministic photo-variant pick for a tile. Keyed on the canonical pattern
- * position so wrap-partner tiles share the same photo — the wall stays
- * perfectly tileable even with natural variation.
+ * Deterministic photo-variant pick for a tile.
+ *
+ * Each row walks its variants as an affine cycle: `(stride · col + offset) % n`,
+ * with the stride drawn from the seed among the values COPRIME to n. That
+ * coprimality is the whole trick — it makes the walk hit every variant before
+ * it repeats, so a row of one colour shows all its photos and never puts the
+ * same photo in two adjacent tiles. A plain random pick would clump: with only
+ * 3 photos for some Second High colours, one neighbour in three would be a
+ * visible duplicate.
+ *
+ * Stride and offset are redrawn per row, so there is no diagonal regularity
+ * across the wall, and both come from the design seed — shuffling the seed
+ * genuinely reshuffles the photography.
+ *
+ * Keyed on the CANONICAL pattern position, so wrap-partner tiles land on the
+ * same photo and the wall stays perfectly tileable.
  */
 export function variantFor(
   urls: readonly string[],
+  seed: number,
   patternRow: number,
   patternCol: number,
 ): string {
-  const h =
-    (Math.imul(patternRow + 17, 73856093) ^ Math.imul(patternCol + 31, 19349663)) >>> 0;
-  return urls[h % urls.length];
+  const n = urls.length;
+  if (n <= 1) return urls[0];
+
+  // Salt the seed so a row's photo walk is independent of its colour draw.
+  const rng = cellRng(seed ^ 0x5bf03635, patternRow, 0);
+
+  let coprimes = 0;
+  for (let a = 1; a < n; a++) if (gcd(a, n) === 1) coprimes++;
+  let pick = Math.floor(rng() * coprimes);
+  let stride = 1;
+  for (let a = 1; a < n; a++) {
+    if (gcd(a, n) === 1 && pick-- === 0) {
+      stride = a;
+      break;
+    }
+  }
+  const offset = Math.floor(rng() * n);
+
+  const col = ((patternCol % n) + n) % n; // patternCol is never negative, but be safe
+  return urls[(stride * col + offset) % n];
+}
+
+/**
+ * A tiny per-tile brightness nudge, as an overlay alpha in [-1, 1] scaled by
+ * TONE_JITTER in TileShape. Real recycled tiles vary in tone even within one
+ * batch, and this keeps a wall alive where a material has very few photos —
+ * Second High ochre-light currently ships just ONE, so without this every such
+ * tile would be pixel-identical. It only moves lightness; it never moves the
+ * light source or the relief, so the tile still reads exactly as photographed.
+ */
+export function toneJitterFor(seed: number, patternRow: number, patternCol: number): number {
+  return cellRng(seed ^ 0x1b873593, patternRow, patternCol)() * 2 - 1;
 }
 
 /**

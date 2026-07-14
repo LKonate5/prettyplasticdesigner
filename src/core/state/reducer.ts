@@ -2,23 +2,16 @@ import { MATERIAL_IDS } from '../../data/palette';
 import { DEFAULT_OPTIONS, EXPOSURE_MAX, EXPOSURE_MIN, PRODUCTS } from '../../data/products';
 import { computeLayout } from '../layout';
 import { generatePattern } from '../pattern/generators';
-import type {
-  Cell,
-  MaterialId,
-  PatternConfig,
-  ProductId,
-  ProductOptions,
-  Rotation,
-} from '../types';
+import type { Cell, MaterialId, PatternConfig, ProductId, ProductOptions } from '../types';
 import type { Action } from './actions';
 
 /**
  * Single app store: a pure reducer with a past/present/future undo history.
  *
  * Undo granularity:
- *  - a whole paint/rotate DRAG is one history entry (the UI brackets pointer
- *    gestures with STROKE_START / STROKE_END; the snapshot is pushed lazily on
- *    the first cell that actually changes, so empty strokes leave no trace);
+ *  - a whole paint DRAG is one history entry (the UI brackets pointer gestures
+ *    with STROKE_START / STROKE_END; the snapshot is pushed lazily on the first
+ *    cell that actually changes, so empty strokes leave no trace);
  *  - a slider run (exposure, tone variation) coalesces into one entry via
  *    `lastCommitKind`.
  */
@@ -45,7 +38,6 @@ export interface AppState {
   /** Identity of the last committed control, so slider runs coalesce. */
   lastCommitKind: string | null;
   ui: {
-    mode: 'paint' | 'rotate';
     brush: MaterialId;
     /** True when the last grid/product change was refused by the tile cap. */
     capNotice: boolean;
@@ -82,7 +74,6 @@ export function defaultPattern(seed: number): PatternConfig {
     solidMaterial: 'grey-medium',
     gradient: { direction: 'vertical' },
     stripes: { direction: 'horizontal', width: 2 },
-    randomRotation: true,
   };
 }
 
@@ -128,7 +119,7 @@ export function appStateFromDesign(present: DesignState): AppState {
     future: [],
     strokeBase: null,
     lastCommitKind: null,
-    ui: { mode: 'paint', brush: 'ochre-medium', capNotice: false },
+    ui: { brush: 'ochre-medium', capNotice: false },
   };
 }
 
@@ -138,10 +129,6 @@ function clampGrid(n: number): number {
 
 function clampExposure(n: number): number {
   return Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, Math.round(n)));
-}
-
-function addRotation(rotation: Rotation, delta: number): Rotation {
-  return ((((rotation + delta * 90) % 360) + 360) % 360) as Rotation;
 }
 
 /**
@@ -248,44 +235,6 @@ export function appReducer(state: AppState, action: Action): AppState {
       return strokeEdit(state, { ...p, cells });
     }
 
-    case 'ROTATE_CELL': {
-      const cell = p.cells[action.cellIndex];
-      if (!cell) return state;
-      const cells = [...p.cells];
-      cells[action.cellIndex] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
-      return strokeEdit(state, { ...p, cells });
-    }
-
-    // Row/column/facade bulk rotate are second-high only (the only product
-    // with a rotatable facet); the UI gates these controls the same way.
-    case 'ROTATE_ROW': {
-      if (p.productId !== 'second-high') return state;
-      const cells = [...p.cells];
-      for (let col = 0; col < p.cols; col++) {
-        const i = action.row * p.cols + col;
-        const cell = cells[i];
-        if (cell) cells[i] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
-      }
-      return strokeEdit(state, { ...p, cells });
-    }
-
-    case 'ROTATE_COLUMN': {
-      if (p.productId !== 'second-high') return state;
-      const cells = [...p.cells];
-      for (let row = 0; row < p.rows; row++) {
-        const i = row * p.cols + action.col;
-        const cell = cells[i];
-        if (cell) cells[i] = { ...cell, rotation: addRotation(cell.rotation, action.delta) };
-      }
-      return strokeEdit(state, { ...p, cells });
-    }
-
-    case 'SET_FACADE_ROTATION': {
-      if (p.productId !== 'second-high') return state;
-      const cells = p.cells.map((cell) => ({ ...cell, rotation: action.rotation }));
-      return commit(state, { ...p, cells });
-    }
-
     case 'STROKE_END':
       return state.strokeBase ? { ...state, strokeBase: null } : state;
 
@@ -313,9 +262,6 @@ export function appReducer(state: AppState, action: Action): AppState {
         lastCommitKind: null,
       };
     }
-
-    case 'SET_MODE':
-      return { ...state, ui: { ...state.ui, mode: action.mode } };
 
     case 'SET_BRUSH':
       return { ...state, ui: { ...state.ui, brush: action.brush } };

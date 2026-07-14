@@ -78,7 +78,7 @@ export function App() {
         cells={design.cells}
         product={product}
         textures={textures}
-        mode={state.ui.mode}
+        seed={design.pattern.seed}
         brush={state.ui.brush}
         dispatch={dispatch}
       />

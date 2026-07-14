@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Dispatch } from 'react';
 import type { Action } from '../core/state/actions';
 import type { AppState } from '../core/state/reducer';
@@ -5,11 +6,13 @@ import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
 import { MATERIAL_IDS } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
+import type { ExportLead } from '../embed/email';
 import { productPhotoStatus } from '../render/textures';
 import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
 import { DimensionInputs } from './DimensionInputs';
 import { ExportMenu } from './ExportMenu';
+import { LeadCaptureModal } from './LeadCaptureModal';
 import { ModeToggle } from './ModeToggle';
 import { PaletteGrid } from './PaletteGrid';
 import { PatternControls } from './PatternControls';
@@ -55,12 +58,21 @@ export function ControlPanel({
     pattern: design.pattern,
   };
 
-  // Only shown as "active" when every tile currently shares one rotation —
-  // once row/column/individual edits diverge, none of the 4 buttons is lit.
-  const facadeRotation =
-    design.cells.length > 0 && design.cells.every((c) => c.rotation === design.cells[0].rotation)
-      ? design.cells[0].rotation
-      : null;
+  // Captured once per visit, shared by ExportMenu and RequestButtons, before
+  // their first send/download — see LeadCaptureModal.
+  const [lead, setLead] = useState<ExportLead | null>(null);
+  const [pendingLead, setPendingLead] = useState<{
+    label: string;
+    onReady: (lead: ExportLead) => void;
+  } | null>(null);
+
+  const requireLead = (label: string, onReady: (lead: ExportLead) => void) => {
+    if (lead) {
+      onReady(lead);
+      return;
+    }
+    setPendingLead({ label, onReady });
+  };
 
   const toggleAllowed = (id: MaterialId) => {
     const has = design.pattern.allowedMaterials.includes(id);
@@ -88,7 +100,11 @@ export function ControlPanel({
         onChange={(productId) => dispatch({ type: 'SET_PRODUCT', productId })}
       />
       {photoStatus === 'none' && <p className="note">{STR.renderedPreviewNote}</p>}
-      {photoStatus === 'borrowed' && <p className="note">{STR.borrowedPhotoNote}</p>}
+      {/* Basic Third no longer shows the borrowed photo (see TileShape) — its
+          marble-fade + bands rendering doesn't need this disclaimer. */}
+      {photoStatus === 'borrowed' && product.id !== 'basic-third' && (
+        <p className="note">{STR.borrowedPhotoNote}</p>
+      )}
 
       <DimensionInputs
         product={product}
@@ -102,7 +118,6 @@ export function ControlPanel({
       {state.ui.capNotice && <p className="warn">{STR.capNotice}</p>}
 
       <PatternControls
-        product={product}
         pattern={design.pattern}
         onPattern={(pattern) => dispatch({ type: 'SET_PATTERN', pattern })}
         onReroll={() => dispatch({ type: 'REROLL', seed: randomSeed() })}
@@ -119,13 +134,8 @@ export function ControlPanel({
       />
 
       <ModeToggle
-        product={product}
-        mode={state.ui.mode}
-        facadeRotation={facadeRotation}
         canUndo={state.past.length > 0}
         canRedo={state.future.length > 0}
-        onMode={(mode) => dispatch({ type: 'SET_MODE', mode })}
-        onFacadeRotation={(rotation) => dispatch({ type: 'SET_FACADE_ROTATION', rotation })}
         onUndo={() => dispatch({ type: 'UNDO' })}
         onRedo={() => dispatch({ type: 'REDO' })}
         onReset={() => dispatch({ type: 'RESET', seed: randomSeed() })}
@@ -141,7 +151,7 @@ export function ControlPanel({
 
       <ShareButton design={design} />
 
-      <ExportMenu ctx={{ ...scene, schedule, design, order }} />
+      <ExportMenu ctx={{ ...scene, schedule, design, order }} requireLead={requireLead} />
 
       <RequestButtons
         design={design}
@@ -149,9 +159,23 @@ export function ControlPanel({
         schedule={schedule}
         order={order}
         scene={scene}
+        requireLead={requireLead}
       />
 
       <p className="note">{STR.regenNote}</p>
+
+      {pendingLead && (
+        <LeadCaptureModal
+          formatLabel={pendingLead.label}
+          onSubmit={(next) => {
+            setLead(next);
+            const onReady = pendingLead.onReady;
+            setPendingLead(null);
+            onReady(next);
+          }}
+          onCancel={() => setPendingLead(null)}
+        />
+      )}
     </aside>
   );
 }

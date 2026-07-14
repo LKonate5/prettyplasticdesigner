@@ -13,7 +13,6 @@ const base = (over: Partial<PatternConfig> = {}): PatternConfig => ({
   solidMaterial: 'ochre-medium',
   gradient: { direction: 'vertical' },
   stripes: { direction: 'horizontal', width: 2 },
-  randomRotation: false,
   ...over,
 });
 
@@ -56,13 +55,14 @@ describe('pattern generators', () => {
     }
   });
 
-  it('random rotation applies only to Second High', () => {
-    const sh = generatePattern(base({ randomRotation: true }), layoutSecondHigh(10, 10));
-    const rotations = new Set(sh.map((c) => c.rotation));
-    expect([...rotations].every((r) => [0, 90, 180, 270].includes(r))).toBe(true);
-    expect(rotations.size).toBeGreaterThan(1);
-    const fo = generatePattern(base({ randomRotation: true }), layoutFirstOne(6, 6));
-    expect(fo.every((c) => c.rotation === 0)).toBe(true);
+  // No product generates a rotation: every tile is laid the same way up, so the
+  // generator only ever decides a colour (see Cell in core/types.ts).
+  it('generates colour and nothing else', () => {
+    for (const layout of [layoutSecondHigh(10, 10), layoutFirstOne(6, 6)]) {
+      for (const cell of generatePattern(base(), layout)) {
+        expect(Object.keys(cell)).toEqual(['material']);
+      }
+    }
   });
 
   it('solid with toneVariation 0 is uniform; with tone > 0 it varies shade only', () => {

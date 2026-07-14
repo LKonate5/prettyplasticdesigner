@@ -81,6 +81,7 @@ export function layoutBasicThird(rows: number, cols: number, options: ProductOpt
         zIndex: row,
         cut,
         shadowStrips,
+        lipStrips: [], // course lap is drawn as a shadow only; no photos yet to match a lip to
       });
     }
   }

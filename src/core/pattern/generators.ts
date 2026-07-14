@@ -1,8 +1,6 @@
 import { MATERIALS, materialIndex, stepShade } from '../../data/palette';
-import type { Cell, Layout, MaterialId, PatternConfig, Rotation } from '../types';
+import type { Cell, Layout, MaterialId, PatternConfig } from '../types';
 import { cellRng } from './prng';
-
-const ROTATIONS: Rotation[] = [0, 90, 180, 270];
 
 /**
  * Pure pattern generation: (config, layout) → cells. Deterministic — same
@@ -32,11 +30,7 @@ export function generatePattern(config: PatternConfig, layout: Layout): Cell[] {
     const rng = cellRng(config.seed, pr, pc);
     let mat = baseMaterial(config, pr, pc, maxRow, maxCol, list, rng);
     if (config.type !== 'gradient') mat = applyToneVariation(mat, config, allowedSet, rng);
-    const rotation: Rotation =
-      config.randomRotation && layout.productId === 'second-high'
-        ? ROTATIONS[Math.floor(rng() * 4)]
-        : 0;
-    cells[tile.cellIndex] = { material: materialIndex(mat), rotation };
+    cells[tile.cellIndex] = { material: materialIndex(mat) };
   }
   return cells;
 }

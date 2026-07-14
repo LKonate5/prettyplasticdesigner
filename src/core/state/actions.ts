@@ -1,4 +1,4 @@
-import type { MaterialId, PatternConfig, ProductId, ProductOptions, Rotation } from '../types';
+import type { MaterialId, PatternConfig, ProductId, ProductOptions } from '../types';
 
 /**
  * Seeds travel inside actions (RESET/REROLL) so the reducer stays fully
@@ -13,13 +13,8 @@ export type Action =
   | { type: 'RESET'; seed: number }
   | { type: 'STROKE_START' }
   | { type: 'PAINT_CELL'; cellIndex: number; material: number }
-  | { type: 'ROTATE_CELL'; cellIndex: number; delta: 1 | -1 }
-  | { type: 'ROTATE_ROW'; row: number; delta: 1 | -1 }
-  | { type: 'ROTATE_COLUMN'; col: number; delta: 1 | -1 }
-  | { type: 'SET_FACADE_ROTATION'; rotation: Rotation }
   | { type: 'STROKE_END' }
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'SET_MODE'; mode: 'paint' | 'rotate' }
   | { type: 'SET_BRUSH'; brush: MaterialId }
   | { type: 'SET_WASTE'; wastePct: number };

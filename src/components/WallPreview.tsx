@@ -12,7 +12,8 @@ interface WallPreviewProps {
   cells: readonly Cell[];
   product: ProductSpec;
   textures: TextureMap;
-  mode: 'paint' | 'rotate';
+  /** Design seed — picks which photo variant each tile gets. */
+  seed: number;
   brush: MaterialId;
   dispatch: Dispatch<Action>;
 }
@@ -26,7 +27,7 @@ const FIT_MARGIN = 0.78;
 /**
  * Full-bleed live preview. The wall pattern FILLS the whole area edge-to-edge
  * (no black bars) by repeating the tileable pattern around the actual wall, and
- * a frame marks the wall the user set. Paint/rotate work on any tile (repeats
+ * a frame marks the wall the user set. Painting works on any tile (repeats
  * share the same cell, so edits stay tileable).
  *
  * Painting uses ONE delegated pointer handler: tiles carry data-cell attributes
@@ -42,7 +43,7 @@ export function WallPreview({
   cells,
   product,
   textures,
-  mode,
+  seed,
   brush,
   dispatch,
 }: WallPreviewProps) {
@@ -54,9 +55,8 @@ export function WallPreview({
   const gesture = useRef<{
     painting: boolean;
     lastKey: string;
-    back: boolean;
     endPaint: (() => void) | null;
-  }>({ painting: false, lastKey: '', back: false, endPaint: null });
+  }>({ painting: false, lastKey: '', endPaint: null });
   const scaleRef = useRef(0.2); // current px-per-mm, for the pan handler
   const pointers = useRef(new Map<number, { x: number; y: number }>()); // active touch points
 
@@ -83,38 +83,13 @@ export function WallPreview({
   }, []);
 
   const applyAt = (target: Element | null) => {
-    const delta = gesture.current.back ? -1 : 1;
-    if (mode === 'rotate') {
-      const rowEl = target?.closest?.('[data-row]');
-      if (rowEl) {
-        const row = Number(rowEl.getAttribute('data-row'));
-        const key = `row:${row}`;
-        if (key === gesture.current.lastKey) return;
-        gesture.current.lastKey = key;
-        dispatch({ type: 'ROTATE_ROW', row, delta });
-        return;
-      }
-      const colEl = target?.closest?.('[data-col]');
-      if (colEl) {
-        const col = Number(colEl.getAttribute('data-col'));
-        const key = `col:${col}`;
-        if (key === gesture.current.lastKey) return;
-        gesture.current.lastKey = key;
-        dispatch({ type: 'ROTATE_COLUMN', col, delta });
-        return;
-      }
-    }
     const el = target?.closest?.('[data-cell]');
     if (!el) return;
     const cellIndex = Number(el.getAttribute('data-cell'));
     const key = `cell:${cellIndex}`;
     if (key === gesture.current.lastKey) return;
     gesture.current.lastKey = key;
-    if (mode === 'paint') {
-      dispatch({ type: 'PAINT_CELL', cellIndex, material: materialIndex(brush) });
-    } else {
-      dispatch({ type: 'ROTATE_CELL', cellIndex, delta });
-    }
+    dispatch({ type: 'PAINT_CELL', cellIndex, material: materialIndex(brush) });
   };
 
   // Right-click or middle-drag pans the image in any direction (like Miro).
@@ -148,7 +123,6 @@ export function WallPreview({
     e.preventDefault();
     gesture.current.painting = true;
     gesture.current.lastKey = '';
-    gesture.current.back = e.shiftKey;
     dispatch({ type: 'STROKE_START' });
     applyAt(e.target as Element);
     const move = (ev: PointerEvent) => {
@@ -222,11 +196,7 @@ export function WallPreview({
       }
     }
     if (e.button !== 0) return;
-    const target = e.target as Element;
-    const targetable =
-      target.closest?.('[data-cell]') ||
-      (mode === 'rotate' && (target.closest?.('[data-row]') || target.closest?.('[data-col]')));
-    if (!targetable) return;
+    if (!(e.target as Element).closest?.('[data-cell]')) return;
     startPaint(e);
   };
 
@@ -280,12 +250,12 @@ export function WallPreview({
         cells={cells}
         product={product}
         textures={textures}
+        seed={seed}
         width="100%"
         height="100%"
         view={view}
         tileOffsets={offsets}
         frame
-        rotateMargins={mode === 'rotate' && product.supportsRotation}
       />
       <div className="zoombar">
         <button onClick={() => setZoomFactor((z) => clampZoom(z / 1.25))} title={STR.zoomOut}>

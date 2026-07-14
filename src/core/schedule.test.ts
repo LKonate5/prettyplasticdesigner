@@ -10,7 +10,6 @@ describe('schedule', () => {
     const layout = layoutSecondHigh(10, 10);
     const cells: Cell[] = layout.tiles.map((t) => ({
       material: t.cellIndex % 2 === 0 ? 0 : 7,
-      rotation: 0,
     }));
     const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
     expect(s.areaM2).toBeCloseTo(9, 6);
@@ -25,7 +24,7 @@ describe('schedule', () => {
 
   it('rounds area up to whole square metres and derives effective tiles/m²', () => {
     const layout = layoutSecondHigh(10, 10); // exactly 9 m²
-    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0 }));
     const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
     expect(s.roundedAreaM2).toBe(9);
     expect(s.effectiveTilesPerM2).toBeCloseTo(s.totalTiles / 9, 6);
@@ -33,14 +32,14 @@ describe('schedule', () => {
 
   it('a 9.1 m² wall rounds up to 10 m²', () => {
     const layout = layoutSecondHigh(11, 10); // 3.0 × 3.3 = 9.9 m²
-    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0 }));
     const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
     expect(s.roundedAreaM2).toBe(10);
   });
 
   it('a tiny wall (1-2 tiles) rounds up to 1 m²', () => {
     const layout = layoutSecondHigh(1, 1);
-    const cells: Cell[] = layout.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const cells: Cell[] = layout.tiles.map(() => ({ material: 0 }));
     const s = computeSchedule(PRODUCTS['second-high'], layout, cells);
     expect(s.roundedAreaM2).toBe(1);
   });
@@ -48,7 +47,7 @@ describe('schedule', () => {
 
 describe('computeOrder', () => {
   const layout = layoutSecondHigh(10, 10); // 9 m² wall, 100 tiles
-  const cells: Cell[] = layout.tiles.map((t) => ({ material: t.cellIndex < 30 ? 0 : 7, rotation: 0 }));
+  const cells: Cell[] = layout.tiles.map((t) => ({ material: t.cellIndex < 30 ? 0 : 7 }));
   const schedule = computeSchedule(PRODUCTS['second-high'], layout, cells);
 
   it('rounds coverage and order UP to full square metres', () => {
@@ -65,7 +64,7 @@ describe('computeOrder', () => {
 
   it('adds waste to the ROUNDED coverage (10 m² + 10% = 11)', () => {
     const l = layoutSecondHigh(11, 10); // 3.0 × 3.3 = 9.9 m² → on-wall 10
-    const c: Cell[] = l.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const c: Cell[] = l.tiles.map(() => ({ material: 0 }));
     const s = computeSchedule(PRODUCTS['second-high'], l, c);
     const order = computeOrder(PRODUCTS['second-high'], s, 0.1);
     expect(order.onWallM2).toBe(10);
@@ -74,7 +73,7 @@ describe('computeOrder', () => {
 
   it('rounds a fractional wall up (no halves)', () => {
     const l = layoutSecondHigh(11, 11); // 3.3×3.3 = 10.89 m²
-    const c: Cell[] = l.tiles.map(() => ({ material: 0, rotation: 0 }));
+    const c: Cell[] = l.tiles.map(() => ({ material: 0 }));
     const s = computeSchedule(PRODUCTS['second-high'], l, c);
     const order = computeOrder(PRODUCTS['second-high'], s, 0);
     expect(order.onWallM2).toBe(11); // ceil(10.89)

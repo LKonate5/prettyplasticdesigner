@@ -9,8 +9,17 @@ import { clipPolygonToRect, insetQuad, polygonsDiffer } from '../geometry';
  * 304 mm, the row pitch that yields the published 22.2 tiles/m² is
  *   ROW_PITCH = 1e6 / (22.2 × 304) ≈ 148.17 mm  (half the visible diamond).
  * The visible faces then tile the plane exactly as 304 × 296.4 rhombi; the
- * hidden ~104 mm head lap is rendered only as a shadow strip on each tile's
- * two upper edges.
+ * hidden ~104 mm head lap shows up as relief on the two edges it affects.
+ *
+ * Reading the lap. Row k+1 sits ON TOP of row k, so at every shared edge the
+ * upper tile's face is raised one tile thickness (29 mm) above the lower one.
+ * That step is drawn from BOTH sides, which is what sells the depth:
+ *   - the lower tile gets a cast shadow inside its two UPPER edges;
+ *   - the upper tile gets a lit lip inside its two LOWER edges — its own
+ *     thickness, seen face-on and catching the light.
+ * The two land either side of the same line, giving the crisp dark/light seam a
+ * real fish-scale wall has. Drawing only the shadow (as this once did) reads
+ * flat, because nothing marks the raised edge.
  *
  * Tileability: the wall is a clean rectangle with cut half-diamonds at every
  * edge. Each cut tile shares a cell with its wrap partner (the matching half on
@@ -26,6 +35,9 @@ const HALF = FO_PITCH_X / 2;
 // edge: rendered stacked, alpha compositing turns this into a soft falloff
 // (a single flat 7 mm stripe read as too thin/flat once real photos landed).
 const SHADOW_DEPTHS = [12, 8, 5, 2];
+// The lit lip is the tile's 29 mm edge seen face-on, so it is narrow and hard —
+// one band, no falloff. Widening it turns the seam into a painted stripe.
+const LIP_DEPTH = 3.5;
 
 function diamond(cx: number, cy: number): Pt[] {
   return [
@@ -83,10 +95,22 @@ export function layoutFirstOne(rows: number, cols: number): Layout {
       const left: Pt = [cx(c) - HALF, cy];
       const top: Pt = [cx(c), cy - RP];
       const right: Pt = [cx(c) + HALF, cy];
+      const bottom: Pt = [cx(c), cy + RP];
       const shadowStrips: Pt[][] = [];
       for (const quad of [...lapShadowBands(left, top, centre), ...lapShadowBands(top, right, centre)]) {
         const q = clipPolygonToRect(quad, 0, 0, wallW, wallH);
         if (q.length >= 3) shadowStrips.push(q);
+      }
+      // Lit lip on the two LOWER edges — this tile's own raised thickness. (The
+      // bottom row's lip falls on its clipped-away lower half, so it costs
+      // nothing there and keeps the relief tileable, like the shadow above.)
+      const lipStrips: Pt[][] = [];
+      for (const edge of [
+        insetQuad(left, bottom, LIP_DEPTH, centre),
+        insetQuad(bottom, right, LIP_DEPTH, centre),
+      ]) {
+        const q = clipPolygonToRect(edge, 0, 0, wallW, wallH);
+        if (q.length >= 3) lipStrips.push(q);
       }
       tiles.push({
         cellIndex: patternRow * cols + patternCol,
@@ -100,6 +124,7 @@ export function layoutFirstOne(rows: number, cols: number): Layout {
         zIndex: rowIdx,
         cut,
         shadowStrips,
+        lipStrips,
       });
     }
   }

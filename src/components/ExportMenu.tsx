@@ -4,7 +4,8 @@ import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { TextureMap } from '../render/textures';
 import { baseName, downloadText } from '../export/download';
-import { openMail, quoteEmail } from '../embed/email';
+import type { ExportLead } from '../embed/email';
+import { exportNotificationEmail, openMail, quoteEmail, submitEmail, withLead } from '../embed/email';
 import { STR } from '../strings';
 
 export interface ExportContext {
@@ -40,7 +41,14 @@ const RASTER_PX_PER_MM = 2;
  * Export dropdown. Each exporter is lazy-loaded on first use (dynamic import)
  * so the heavy PDF/DXF/rasterization code stays out of the initial embed.
  */
-export function ExportMenu({ ctx }: { ctx: ExportContext }) {
+export function ExportMenu({
+  ctx,
+  requireLead,
+}: {
+  ctx: ExportContext;
+  /** Shared with RequestButtons — asks once per visit (see ControlPanel). */
+  requireLead: (label: string, onReady: (lead: ExportLead) => void) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -55,14 +63,25 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
   };
   const name = baseName(ctx.product.id, ctx.layout.rows, ctx.layout.cols);
 
-  async function run(format: Format) {
+  function run(format: Format) {
+    const label = FORMATS.find((f) => f.id === format)?.label ?? format;
+    requireLead(label, (lead) => void runExport(format, lead));
+  }
+
+  async function runExport(format: Format, currentLead: ExportLead) {
     setBusy(format);
     setMsg(null);
     try {
       switch (format) {
         case 'email': {
           const { subject, body } = quoteEmail(ctx.product, ctx.schedule, ctx.design, ctx.order);
-          openMail(subject, body);
+          const withContact = withLead(currentLead, body);
+          const result = await submitEmail(subject, withContact);
+          if (result.ok) setMsg(STR.emailSent);
+          else {
+            openMail(subject, withContact); // fallback: visitor's own mail app, same content
+            setMsg(`${STR.emailFallback} (${result.error})`);
+          }
           break;
         }
         case 'png':
@@ -128,6 +147,20 @@ export function ExportMenu({ ctx }: { ctx: ExportContext }) {
           downloadBlob(zip, `${name}_obj.zip`);
           break;
         }
+      }
+      // The email case already tells Pretty Plastic who's asking; every other
+      // format is a silent download, so let them know it happened. Best-effort
+      // — a visitor's file already downloaded fine regardless of this.
+      if (format !== 'email') {
+        const label = FORMATS.find((f) => f.id === format)?.label ?? format;
+        const { subject, body } = exportNotificationEmail(
+          currentLead,
+          label,
+          ctx.product,
+          ctx.schedule,
+          ctx.design,
+        );
+        void submitEmail(subject, body);
       }
     } catch (err) {
       setMsg(`Export failed: ${(err as Error).message}`);

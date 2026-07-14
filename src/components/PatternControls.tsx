@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MaterialId, PatternConfig, PatternType, ProductSpec } from '../core/types';
+import type { MaterialId, PatternConfig, PatternType } from '../core/types';
 import { codeToSeed, randomSeed, seedToCode } from '../core/pattern/prng';
 import { MATERIALS } from '../data/palette';
 import { PRESETS } from '../data/presets';
@@ -15,15 +15,13 @@ const TYPE_LABELS: Record<PatternType, string> = {
 
 /**
  * Pattern generator controls: type, per-type options, tone-variation slider,
- * seed field + shuffle, and (Second High only) random-rotation toggle.
+ * and the seed field + shuffle.
  */
 export function PatternControls({
-  product,
   pattern,
   onPattern,
   onReroll,
 }: {
-  product: ProductSpec;
   pattern: PatternConfig;
   onPattern: (next: Partial<PatternConfig>) => void;
   onReroll: () => void;
@@ -162,17 +160,6 @@ export function PatternControls({
           onChange={(e) => onPattern({ toneVariation: Number(e.target.value) })}
         />
       </div>
-
-      {product.supportsRotation && (
-        <label className="check field">
-          <input
-            type="checkbox"
-            checked={pattern.randomRotation}
-            onChange={(e) => onPattern({ randomRotation: e.target.checked })}
-          />
-          {STR.randomRotation}
-        </label>
-      )}
 
       <div className="field">
         <button className="btn primary" style={{ width: '100%' }} onClick={onReroll}>

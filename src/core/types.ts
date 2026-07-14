@@ -29,12 +29,9 @@ export interface ProductSpec {
   nominalTilesPerM2: number;
   /** Square metres of tile per (euro)pallet — the unit Pretty Plastic ships in. */
   palletM2: number;
-  supportsRotation: boolean; // second-high only
   hasBond: boolean; // basic-third only
   maxTiles: number;
 }
-
-export type Rotation = 0 | 90 | 180 | 270;
 
 export interface ProductOptions {
   /** Visible course height in mm for Basic Third (300–500). Ignored by other products. */
@@ -69,7 +66,16 @@ export interface Tile {
   exportPolygon: Pt[];
   zIndex: number; // draw order; ascending = bottom rows first, so higher rows overlap
   cut: boolean; // true when the tile is cut at a wall edge
-  shadowStrips: Pt[][]; // translucent lap-shadow quads drawn over the tile fill
+  /** Translucent lap-shadow quads: where the tile ABOVE casts onto this one. */
+  shadowStrips: Pt[][];
+  /**
+   * Lit quads along the tile's own free (lower) edges — its physical thickness
+   * catching the light where it steps up off the tile beneath. The shadow above
+   * and the lip below meet on the same lap line: that light/dark pair is what
+   * makes a lapped wall read as 3D instead of as flat stickers. Empty for
+   * products that don't lap.
+   */
+  lipStrips: Pt[][];
 }
 
 export interface Layout {
@@ -106,10 +112,19 @@ export interface PatternConfig {
   solidMaterial: MaterialId;
   gradient: { direction: 'horizontal' | 'vertical' | 'diagonal' };
   stripes: { direction: 'horizontal' | 'vertical'; width: number }; // width in cells
-  randomRotation: boolean; // second-high only
 }
 
+/**
+ * One logical tile. Colour only — tiles are never rotated or mirrored.
+ *
+ * Every Pretty Plastic tile is directional: First One hangs from a nose at its
+ * north vertex, and Second High's relief wedge protrudes one specific way. The
+ * photography is shot accordingly, lit from a single direction, so turning a
+ * tile in the render would turn its light with it and produce a wall that
+ * cannot physically exist (a 180° Second High reads as a dent, not a bump).
+ * Variety between same-coloured tiles comes from the photo variant instead —
+ * see variantFor() in render/textures.ts.
+ */
 export interface Cell {
   material: number; // index into MATERIALS (small numbers keep undo snapshots cheap)
-  rotation: Rotation; // always 0 except second-high
 }

@@ -120,14 +120,56 @@ handful of values at the top of `src/styles/theme.css`.
 
 ## Configuration (`src/config.ts` and `src/data/products.ts`)
 
-- **`SALES_EMAIL`** (`config.ts`) — where the "Request a sample" and "Request a
-  quote" buttons address their email. Defaults to `info@prettyplastic.nl`. (The
-  buttons open the visitor's own email app with the message pre-filled — the
-  quote button also downloads the wall image to attach, since emails can't carry
-  an attachment by themselves.)
+- **`SALES_EMAIL`** (`config.ts`) — where the "Request a sample", "Request a
+  quote" and "Email to Pretty Plastic" buttons send their message. Defaults to
+  `info@prettyplastic.nl`.
 - **`palletM2`** (`products.ts`) — square metres of tile per europallet, per
   product (First One 40, Second High 30, Basic Third 60). Order quantities are
   rounded up to full square metres and divided into whole pallets.
+
+---
+
+## Sending email (Resend)
+
+This is the one place the app is **not** 100% static: sending an actual email
+needs a tiny server-side function, because the Resend API key must never be
+visible to the browser (anything shipped to `src/` is downloadable by every
+visitor via view-source — a key there could be stolen and used to send mail
+under Pretty Plastic's name). So:
+
+- `api/send-email.ts` — a **Vercel serverless function**. It reads
+  `RESEND_API_KEY` from the server's environment and is the only code that ever
+  touches it. The browser calls `POST /api/send-email` with just the message
+  text (and an optional attachment); the function fills in the real `from`/`to`
+  and calls Resend.
+- The recipient (`SALES_EMAIL`) is **hard-coded server-side**, not sent by the
+  browser — so the endpoint can't be turned into an open relay to some other
+  address.
+- **"Request a sample"**, **"Request a quote"** (which also attaches a preview
+  image of the wall) and **Export → "Email to Pretty Plastic"** all use this.
+  If the send fails for any reason (missing key, offline, Resend error), each
+  one falls back to opening the visitor's own email app with the same message
+  pre-filled, so nothing is ever a dead end.
+
+### Setup
+
+1. Get an API key at [resend.com/api-keys](https://resend.com/api-keys).
+2. **Local development:** copy `.env.example` to `.env` and paste the key in.
+   `.env` is gitignored — never commit a real key.
+3. **Production (Vercel):** add `RESEND_API_KEY` in the project's
+   **Settings → Environment Variables** — not in a file at all.
+4. The sender address is Resend's shared testing address
+   (`onboarding@resend.dev`), which works with no setup. For real production
+   use, [verify a domain in Resend](https://resend.com/docs/dashboard/domains/introduction)
+   (e.g. `prettyplastic.nl`) and change `FROM_EMAIL` in
+   `api/_lib/sendEmail.ts` to a real address on it — this improves
+   deliverability and stops the email looking like it came from a stranger.
+
+Because this needs a server-side function, the static build alone (the
+`dist/` folder) can't send email on its own — it has to be **hosted on
+Vercel** (or another platform that runs the same `/api` files) for that one
+feature to work. Everything else in this app — the designer, every file
+export — still runs 100% in the browser with no server at all.
 
 ---
 

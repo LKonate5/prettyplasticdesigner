@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { Material, Pt, Rotation, Tile } from '../core/types';
+import type { Material, Pt, Tile } from '../core/types';
 
 const fmt = (n: number): string => {
   const r = Math.round(n * 1000) / 1000;
@@ -14,6 +14,14 @@ export const pointsAttr = (poly: Pt[]): string =>
 // One stacks several bands of this same fill via normal alpha compositing, so
 // its lap reads as a soft falloff rather than one flat stripe.
 const SHADOW_FILL = 'rgba(0,0,0,0.18)';
+// The lapping tile's own edge, catching the light (tile.lipStrips). Paired with
+// the shadow above it across the lap line — see layout/firstOne.ts.
+const LIP_FILL = 'rgba(255,255,255,0.16)';
+
+// Ceiling on the per-tile tone nudge (see toneJitterFor in textures.ts): a ±4%
+// black/white wash. Enough to stop a material with only one photo reading as a
+// stamped repeat, small enough that it never fights the photo's own lighting.
+const TONE_JITTER = 0.04;
 
 // First One photo placement (photos are ~1785×2400: the full 304×400 mm
 // physical diamond incl. its hidden top lap, on a backdrop). The image is
@@ -23,61 +31,15 @@ const FO_IMG_W = 316; // 304 mm × ~4% overscan
 const FO_IMG_H = FO_IMG_W * (2400 / 1785);
 const FO_IMG_BOTTOM = 154; // rhombus bottom vertex ≈ +148.2, plus a little bleed
 
-// Borrowed First One photos (used by Basic Third until it has its own — see
-// PHOTO_FALLBACK in textures.ts) are diamond-on-backdrop frames: converting
-// them to JPEG flattened the transparent corners to WHITE. A plain rectangular
-// crop of the full frame could show that white background, so instead we
-// sample only the centre of the frame — the Sutherland–Hodgman-style inscribed
-// rectangle of a rhombus that fills its bounding box tops out at the centre
-// 50%; we use a smaller 40% for a comfortable margin — which stays entirely
-// inside the marble surface regardless of tile shape or aspect ratio.
-const BORROWED_SRC_W = 1785;
-const BORROWED_SRC_H = 2400;
-const BORROWED_CROP_INSET = 0.3; // keep the centre (1 − 2×0.3) = 40% on each axis
-
-function BorrowedPhotoFill({
-  href,
-  x,
-  y,
-  w,
-  h,
-}: {
-  href: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}) {
-  const cropW = BORROWED_SRC_W * (1 - 2 * BORROWED_CROP_INSET);
-  const cropH = BORROWED_SRC_H * (1 - 2 * BORROWED_CROP_INSET);
-  return (
-    <svg
-      x={x}
-      y={y}
-      width={w}
-      height={h}
-      viewBox={`0 0 ${cropW} ${cropH}`}
-      preserveAspectRatio="xMidYMid slice"
-    >
-      <image
-        href={href}
-        x={-BORROWED_SRC_W * BORROWED_CROP_INSET}
-        y={-BORROWED_SRC_H * BORROWED_CROP_INSET}
-        width={BORROWED_SRC_W}
-        height={BORROWED_SRC_H}
-      />
-    </svg>
-  );
-}
-
 interface TileShapeProps {
   tile: Tile;
   material: Material;
-  rotation: Rotation;
   /** Photo variant URL for this tile, or null → flat hex fill. */
   texUrl: string | null;
   /** True when texUrl is borrowed from a sibling product's photos (see PHOTO_FALLBACK). */
   texBorrowed: boolean;
+  /** −1..1 tone nudge for this tile (see toneJitterFor); scaled by TONE_JITTER. */
+  toneJitter: number;
   productId: string;
 }
 
@@ -86,21 +48,22 @@ interface TileShapeProps {
  * Cut edge tiles draw their full shape and get clipped by the shared wall
  * clipPath, so overlays (facets, bands, photos) are cut with the tile.
  *
- * With a real photo: Second High draws the square photo directly (rotating
- * with the tile); First One draws the diamond photo clipped to the shared
- * #pp-diamond rhombus. Basic Third covers its rect with either its own future
- * photos (full-frame, like Second High) or — for now — a safe centre-crop of
- * First One's borrowed photos (BorrowedPhotoFill); its 3 vertical relief bands
- * (#pp-bands) always draw on top regardless, since that grooved 3-slat profile
- * is the product's actual physical shape, not just a no-photo placeholder.
- * Without a photo: hex fill + the procedural facet/band overlays.
+ * Photos are drawn in their NATIVE orientation, never rotated or mirrored: the
+ * relief and the light are baked into the photo, so turning it would turn the
+ * light with it (see Cell in core/types.ts). Second High draws its square photo
+ * straight; First One draws its diamond photo clipped to the shared #pp-diamond
+ * rhombus, keeping the tile's hanging nose to the north. Basic Third always
+ * keeps its true hex colour (no borrowed photo — a borrowed marble crop can't
+ * match its defined palette swatches) plus a subtle top-to-bottom
+ * #pp-marble-fade tint and its 3 vertical relief bands (#pp-bands), since that
+ * grooved 3-slat profile is the product's actual physical shape. Without a
+ * photo: hex fill + the procedural facet/band overlays.
  */
 export const TileShape = memo(function TileShape({
   tile,
   material,
-  rotation,
   texUrl,
-  texBorrowed,
+  toneJitter,
   productId,
 }: TileShapeProps) {
   const [x, y] = tile.polygon[0];
@@ -109,7 +72,6 @@ export const TileShape = memo(function TileShape({
 
   let content;
   if (texUrl && second) {
-    // texture must rotate with the tile, so draw the image directly
     content = (
       <image
         href={texUrl}
@@ -117,7 +79,6 @@ export const TileShape = memo(function TileShape({
         y={y}
         width={size}
         height={size}
-        transform={rotation ? `rotate(${rotation} ${x + size / 2} ${y + size / 2})` : undefined}
         preserveAspectRatio="xMidYMid slice"
       />
     );
@@ -137,14 +98,6 @@ export const TileShape = memo(function TileShape({
         />
       </g>
     );
-  } else if (texUrl && productId === 'basic-third') {
-    const w = tile.polygon[1][0] - tile.polygon[0][0];
-    const h = tile.polygon[2][1] - tile.polygon[1][1];
-    content = texBorrowed ? (
-      <BorrowedPhotoFill href={texUrl} x={x} y={y} w={w} h={h} />
-    ) : (
-      <image href={texUrl} x={x} y={y} width={w} height={h} preserveAspectRatio="xMidYMid slice" />
-    );
   } else {
     content = (
       <polygon
@@ -159,19 +112,33 @@ export const TileShape = memo(function TileShape({
   return (
     <g data-cell={tile.cellIndex} clipPath={tile.cut ? 'url(#pp-wall-clip)' : undefined}>
       {content}
-      {second && !texUrl && (
-        <use
-          href="#pp-facet"
-          transform={`translate(${fmt(x)} ${fmt(y)})${
-            rotation ? ` rotate(${rotation} ${size / 2} ${size / 2})` : ''
-          }`}
+      {/* Tone nudge: keeps same-coloured photo tiles from reading as one stamp
+          repeated. Lightness only — the relief and its light stay untouched. */}
+      {texUrl && toneJitter !== 0 && (
+        <polygon
+          points={pointsAttr(tile.polygon)}
+          fill={toneJitter > 0 ? '#ffffff' : '#000000'}
+          opacity={fmt(Math.abs(toneJitter) * TONE_JITTER)}
         />
       )}
+      {second && !texUrl && <use href="#pp-facet" transform={`translate(${fmt(x)} ${fmt(y)})`} />}
       {productId === 'basic-third' && (
-        <use href="#pp-bands" transform={`translate(${fmt(x)} ${fmt(y)})`} />
+        <>
+          <rect
+            x={x}
+            y={y}
+            width={tile.polygon[1][0] - tile.polygon[0][0]}
+            height={tile.polygon[2][1] - tile.polygon[1][1]}
+            fill="url(#pp-marble-fade)"
+          />
+          <use href="#pp-bands" transform={`translate(${fmt(x)} ${fmt(y)})`} />
+        </>
       )}
       {tile.shadowStrips.map((strip, i) => (
         <polygon key={i} points={pointsAttr(strip)} fill={SHADOW_FILL} />
+      ))}
+      {tile.lipStrips.map((strip, i) => (
+        <polygon key={`lip-${i}`} points={pointsAttr(strip)} fill={LIP_FILL} />
       ))}
     </g>
   );
