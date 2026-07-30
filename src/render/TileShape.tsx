@@ -27,15 +27,18 @@ const TONE_JITTER = 0.04;
 // physical diamond incl. its hidden top lap, on a backdrop). The image is
 // scaled slightly past the visible rhombus and bottom-anchored, then clipped
 // by #pp-diamond so the photo always covers the tile with no backdrop slivers.
-const FO_IMG_W = 316; // 304 mm × ~4% overscan
-const FO_IMG_H = FO_IMG_W * (2400 / 1785);
-const FO_IMG_BOTTOM = 154; // rhombus bottom vertex ≈ +148.2, plus a little bleed
+export const SECOND_HIGH_IMG_SIZE = 294;
+export const FO_IMG_W = 316; // 304 mm × ~4% overscan
+export const FO_IMG_H = FO_IMG_W * (2400 / 1785);
+export const FO_IMG_BOTTOM = 154; // rhombus bottom vertex ≈ +148.2, plus a little bleed
 
 interface TileShapeProps {
   tile: Tile;
   material: Material;
   /** Photo variant URL for this tile, or null → flat hex fill. */
   texUrl: string | null;
+  /** Optional SVG <defs> id for texUrl, avoiding duplicated base64 payloads in exports. */
+  texId?: string;
   /** True when texUrl is borrowed from a sibling product's photos (see PHOTO_FALLBACK). */
   texBorrowed: boolean;
   /** −1..1 tone nudge for this tile (see toneJitterFor); scaled by TONE_JITTER. */
@@ -61,19 +64,23 @@ export const TileShape = memo(function TileShape({
   tile,
   material,
   texUrl,
+  texId,
   toneJitter,
   productId,
   rotation,
 }: TileShapeProps) {
   const [x, y] = tile.polygon[0];
   const second = productId === 'second-high';
-  const size = 294;
+  const size = SECOND_HIGH_IMG_SIZE;
+  const texHref = texId ? `#${texId}` : texUrl;
 
   let content;
-  if (texUrl && second) {
-    content = (
+  if (texHref && second) {
+    content = texId ? (
+      <use href={texHref} x={x} y={y} />
+    ) : (
       <image
-        href={texUrl}
+        href={texHref}
         x={x}
         y={y}
         width={size}
@@ -87,14 +94,18 @@ export const TileShape = memo(function TileShape({
     const cy = (tile.polygon[0][1] + tile.polygon[2][1]) / 2;
     content = (
       <g transform={`translate(${fmt(cx)} ${fmt(cy)})`} clipPath="url(#pp-diamond)">
-        <image
-          href={texUrl}
-          x={-FO_IMG_W / 2}
-          y={FO_IMG_BOTTOM - FO_IMG_H}
-          width={FO_IMG_W}
-          height={FO_IMG_H}
-          preserveAspectRatio="xMidYMid slice"
-        />
+        {texId ? (
+          <use href={texHref ?? ''} x={-FO_IMG_W / 2} y={FO_IMG_BOTTOM - FO_IMG_H} />
+        ) : (
+          <image
+            href={texUrl}
+            x={-FO_IMG_W / 2}
+            y={FO_IMG_BOTTOM - FO_IMG_H}
+            width={FO_IMG_W}
+            height={FO_IMG_H}
+            preserveAspectRatio="xMidYMid slice"
+          />
+        )}
       </g>
     );
   } else {

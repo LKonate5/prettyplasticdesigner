@@ -56,17 +56,20 @@ describe('lead email content', () => {
   it('includes address, products and colours in sample emails', () => {
     const { design, product, schedule } = fixtures();
     const { body } = sampleEmail(product, schedule, design, {
-      street: 'Canal Street 12',
+      streetName: 'Canal Street',
+      streetNumber: '12',
+      streetAddition: 'A',
       postalCode: '1011 AB',
       city: 'Amsterdam',
-      country: 'Netherlands',
+      country: 'Netherlands 🇳🇱',
       selections: [
         { productId: 'second-high', materialIds: ['green-medium', 'grey-dark'] },
         { productId: 'basic-third', materialIds: ['ochre-light'] },
       ],
     });
-    expect(body).toContain('Canal Street 12');
+    expect(body).toContain('Canal Street 12 A');
     expect(body).toContain('1011 AB Amsterdam');
+    expect(body).toContain('Netherlands 🇳🇱');
     expect(body).toContain('Second High: Green Medium, Grey Dark');
     expect(body).toContain('Basic Third: Ochre Light');
   });

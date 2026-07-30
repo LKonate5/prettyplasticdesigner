@@ -26,7 +26,9 @@ export interface QuoteRequestDetails {
 }
 
 export interface SampleRequestDetails {
-  street: string;
+  streetName: string;
+  streetNumber: string;
+  streetAddition?: string;
   postalCode: string;
   city: string;
   country: string;
@@ -65,6 +67,9 @@ const sampleSelectionLines = (sample: SampleRequestDetails): string[] =>
     (selection) =>
       `  • ${PRODUCTS[selection.productId]?.name ?? selection.productId}: ${materialNames(selection.materialIds)}`,
   );
+
+const addressLine = (sample: SampleRequestDetails): string =>
+  [sample.streetName, sample.streetNumber, sample.streetAddition].filter(Boolean).join(' ');
 
 /** Prefixes an outgoing email body with who the visitor is. */
 export function withLead(lead: ExportLead, body: string): string {
@@ -181,7 +186,7 @@ export function sampleEmail(
           ...sampleSelectionLines(sample),
           '',
           'Delivery address:',
-          `${sample.street}`,
+          addressLine(sample),
           `${sample.postalCode} ${sample.city}`,
           `${sample.country}`,
           '',

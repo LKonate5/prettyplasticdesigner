@@ -3,7 +3,7 @@ import { materialAt } from '../data/palette';
 import { SceneDefs } from './defs';
 import type { TextureMap } from './textures';
 import { resolveTexture, toneJitterFor, variantFor } from './textures';
-import { TileShape } from './TileShape';
+import { FO_IMG_H, FO_IMG_W, SECOND_HIGH_IMG_SIZE, TileShape } from './TileShape';
 
 /**
  * The one and only wall renderer. The live preview, the SVG export and the
@@ -63,19 +63,28 @@ export function WallScene({
   const { wallW, wallH } = layout;
   const v: ViewBox = view ?? { x: 0, y: 0, w: wallW, h: wallH };
   const offsets = tileOffsets ?? [[0, 0]];
+  const textureIds = new Map<string, string>();
+
+  const textureIdFor = (url: string): string => {
+    const existing = textureIds.get(url);
+    if (existing) return existing;
+    const id = `pp-tex-${textureIds.size}`;
+    textureIds.set(url, id);
+    return id;
+  };
 
   const tiles = layout.tiles.map((tile, i) => {
     const cell = cells[tile.cellIndex];
     const material = materialAt(cell?.material ?? 0);
     const resolved = resolveTexture(textures, product.id, material.id);
+    const texUrl = resolved ? variantFor(resolved.urls, seed, tile.patternRow, tile.patternCol) : null;
     return (
       <TileShape
         key={i}
         tile={tile}
         material={material}
-        texUrl={
-          resolved ? variantFor(resolved.urls, seed, tile.patternRow, tile.patternCol) : null
-        }
+        texUrl={texUrl}
+        texId={texUrl && product.id !== 'basic-third' ? textureIdFor(texUrl) : undefined}
         texBorrowed={resolved ? !resolved.native : false}
         toneJitter={toneJitterFor(seed, tile.patternRow, tile.patternCol)}
         productId={product.id}
@@ -93,6 +102,31 @@ export function WallScene({
       preserveAspectRatio={preserveAspectRatio}
     >
       <SceneDefs product={product} layout={layout} />
+      {textureIds.size > 0 && (
+        <defs>
+          {[...textureIds].map(([url, id]) =>
+            product.id === 'first-one' ? (
+              <image
+                key={id}
+                id={id}
+                href={url}
+                width={FO_IMG_W}
+                height={FO_IMG_H}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            ) : (
+              <image
+                key={id}
+                id={id}
+                href={url}
+                width={SECOND_HIGH_IMG_SIZE}
+                height={SECOND_HIGH_IMG_SIZE}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            ),
+          )}
+        </defs>
+      )}
       {/* backing fills the whole visible region so repeats sit on the same ground */}
       <rect x={v.x} y={v.y} width={v.w} height={v.h} fill={WALL_BG} />
       {offsets.map(([dx, dy], oi) =>

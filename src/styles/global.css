@@ -476,6 +476,54 @@ table.schedule {
   grid-template-columns: 1fr 1fr;
 }
 
+.country-combobox {
+  position: relative;
+}
+
+.country-options {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 120;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--pp-border);
+  border-radius: var(--pp-radius);
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.country-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+}
+
+.country-option:hover,
+.country-option[aria-selected='true'] {
+  background: var(--pp-bg);
+}
+
+.country-option.empty {
+  display: block;
+  cursor: default;
+  color: var(--pp-muted);
+}
+
+.country-flag,
+.country-code {
+  color: var(--pp-muted);
+}
+
 .modal-card textarea {
   width: 100%;
   padding: 6px 8px;

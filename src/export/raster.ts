@@ -4,6 +4,12 @@ import { buildSceneSvg, type SceneInput } from './svg';
 
 const MAX_EDGE = 8192; // Safari caps canvas dimensions ~8k; clamp the long edge.
 
+interface RasterOptions {
+  legend?: Schedule;
+  maxEdge?: number;
+  quality?: number;
+}
+
 export interface RasterResult {
   blob: Blob;
   width: number;
@@ -46,6 +52,15 @@ function clampScale(wallW: number, wallH: number, pxPerMm: number) {
   };
 }
 
+function cappedScale(wallW: number, wallH: number, pxPerMm: number, maxEdge?: number) {
+  const long = Math.max(wallW, wallH);
+  const maxEdgeScale = maxEdge ? maxEdge / long : pxPerMm;
+  const requestedScale = Math.min(pxPerMm, maxEdgeScale);
+  const cappedByMaxEdge = requestedScale < pxPerMm;
+  const raster = clampScale(wallW, wallH, requestedScale);
+  return { ...raster, clamped: cappedByMaxEdge || raster.clamped };
+}
+
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), type, quality),
@@ -57,13 +72,10 @@ export async function renderRaster(
   scene: SceneInput,
   format: 'png' | 'jpeg',
   pxPerMm: number,
-  opts: { legend?: Schedule; maxEdge?: number; quality?: number } = {},
+  opts: RasterOptions = {},
 ): Promise<RasterResult> {
   const { wallW, wallH } = scene.layout;
-  const requestedScale = opts.maxEdge
-    ? Math.min(pxPerMm, opts.maxEdge / Math.max(wallW, wallH))
-    : pxPerMm;
-  const { pxW, pxH, clamped } = clampScale(wallW, wallH, requestedScale);
+  const { pxW, pxH, clamped } = cappedScale(wallW, wallH, pxPerMm, opts.maxEdge);
   const svg = await buildSceneSvg(scene, { mm: false });
   const canvas = await svgToCanvas(svg, pxW, pxH);
   const out = format === 'jpeg' ? withWhiteGround(canvas) : canvas;
@@ -85,7 +97,7 @@ export async function exportRaster(
   format: 'png' | 'jpeg',
   pxPerMm: number,
   filename: string,
-  opts: { legend?: Schedule } = {},
+  opts: RasterOptions = {},
 ): Promise<RasterResult> {
   const result = await renderRaster(scene, format, pxPerMm, opts);
   downloadBlob(result.blob, filename);
@@ -121,12 +133,13 @@ export async function exportSeamless(
   scene: SceneInput,
   pxPerMm: number,
   filename: string,
+  opts: { maxEdge?: number } = {},
 ): Promise<SeamlessOutcome> {
   const period = scene.layout.torusPeriod;
   if (!period) {
     return { ok: false, reason: 'This layout can’t tile seamlessly — use an even row count.' };
   }
-  const { pxW, pxH, clamped } = clampScale(period.w, period.h, pxPerMm);
+  const { pxW, pxH, clamped } = cappedScale(period.w, period.h, pxPerMm, opts.maxEdge);
   const svg = await buildSceneSvg(scene, { mm: false });
   const canvas = await svgToCanvas(svg, pxW, pxH);
   const blob = await canvasToBlob(canvas, 'image/png');

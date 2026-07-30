@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadTextures, variantFor } from './textures';
+import { loadTextures, resolveTexture, variantFor } from './textures';
 
 /**
  * Since tiles are never rotated (see Cell in core/types.ts), the photo variant
@@ -79,5 +79,17 @@ describe('loadTextures', () => {
 
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down'); }));
     expect(await loadTextures()).toEqual(new Map());
+  });
+});
+
+describe('resolveTexture', () => {
+  it('marks Basic Third texture fallbacks as borrowed First One photos', () => {
+    const textures = new Map([['first-one/ochre-light', ['/textures/first-one/ochre-light-01.jpg']]]);
+
+    expect(resolveTexture(textures, 'basic-third', 'ochre-light')).toEqual({
+      urls: ['/textures/first-one/ochre-light-01.jpg'],
+      native: false,
+      key: 'first-one/ochre-light',
+    });
   });
 });

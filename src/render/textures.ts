@@ -36,6 +36,7 @@ export interface ResolvedTexture {
   urls: readonly string[];
   /** False when these are borrowed from PHOTO_FALLBACK rather than the product's own photos. */
   native: boolean;
+  key: string;
 }
 
 export function resolveTexture(
@@ -43,12 +44,14 @@ export function resolveTexture(
   productId: ProductId,
   materialId: MaterialId,
 ): ResolvedTexture | null {
-  const own = textures.get(textureKey(productId, materialId));
-  if (own && own.length > 0) return { urls: own, native: true };
+  const ownKey = textureKey(productId, materialId);
+  const own = textures.get(ownKey);
+  if (own && own.length > 0) return { urls: own, native: true, key: ownKey };
   const fallbackProduct = PHOTO_FALLBACK[productId];
   if (fallbackProduct) {
-    const borrowed = textures.get(textureKey(fallbackProduct, materialId));
-    if (borrowed && borrowed.length > 0) return { urls: borrowed, native: false };
+    const borrowedKey = textureKey(fallbackProduct, materialId);
+    const borrowed = textures.get(borrowedKey);
+    if (borrowed && borrowed.length > 0) return { urls: borrowed, native: false, key: borrowedKey };
   }
   return null;
 }
@@ -179,10 +182,9 @@ export async function texturesAsDataUrls(
   const out = new Map<string, readonly string[]>();
   await Promise.all(
     materialIds.map(async (mid) => {
-      const key = textureKey(productId, mid);
-      const urls = textures.get(key);
-      if (!urls || urls.length === 0) return;
-      out.set(key, await Promise.all(urls.map(fetchDataUrl)));
+      const resolved = resolveTexture(textures, productId, mid);
+      if (!resolved) return;
+      out.set(resolved.key, await Promise.all(resolved.urls.map(fetchDataUrl)));
     }),
   );
   return out;

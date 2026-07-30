@@ -34,8 +34,10 @@ const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL — universal 3D interchange' },
 ];
 
-// Scale presets in px per mm. 2 px/mm ≈ 200 dpi at real size — plenty for print.
-const RASTER_PX_PER_MM = 2;
+// Image exports are for sharing/review; PDF/SVG/CAD keep the real-mm design data.
+const RASTER_PX_PER_MM = 1;
+const RASTER_MAX_EDGE = 2200;
+const RASTER_JPEG_QUALITY = 0.82;
 
 /**
  * Export dropdown. Each exporter is lazy-loaded on first use (dynamic import)
@@ -93,8 +95,10 @@ export function ExportMenu({
           const { exportRaster } = await import('../export/raster');
           const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${format}`, {
             legend: ctx.schedule,
+            maxEdge: RASTER_MAX_EDGE,
+            quality: RASTER_JPEG_QUALITY,
           });
-          if (r.clamped) setMsg('Large wall — image was capped at 8192 px on the long edge.');
+          if (r.clamped) setMsg(`Image export was capped at ${RASTER_MAX_EDGE} px on the long edge.`);
           break;
         }
         case 'svg': {
@@ -104,9 +108,11 @@ export function ExportMenu({
         }
         case 'seamless': {
           const { exportSeamless } = await import('../export/raster');
-          const out = await exportSeamless(scene, RASTER_PX_PER_MM, `${name}_seamless.png`);
+          const out = await exportSeamless(scene, RASTER_PX_PER_MM, `${name}_seamless.png`, {
+            maxEdge: RASTER_MAX_EDGE,
+          });
           if (!out.ok) setMsg(out.reason ?? 'Could not create a seamless tile.');
-          else if (out.result?.clamped) setMsg('Repeat was capped at 8192 px on the long edge.');
+          else if (out.result?.clamped) setMsg(`Repeat export was capped at ${RASTER_MAX_EDGE} px on the long edge.`);
           break;
         }
         case 'dxf': {

@@ -51,7 +51,7 @@ export function RequestButtons({
   const defaultSampleMaterials = [...schedule.rows]
     .sort((a, b) => b.count - a.count)
     .map((row) => row.material.id)
-    .slice(0, 3);
+    .slice(0, 5);
 
   const openSamplePreview = () => {
     requireLead(
@@ -63,10 +63,12 @@ export function RequestButtons({
       {
         mode: 'sample',
         sampleDefaults: {
-          street: '',
+          streetName: '',
+          streetNumber: '',
+          streetAddition: '',
           postalCode: '',
           city: '',
-          country: STR.defaultCountry,
+          country: '',
           selections: [{ productId: product.id, materialIds: defaultSampleMaterials }],
         },
       },

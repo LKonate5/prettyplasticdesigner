@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ExportLead, LeadRequestContext, SampleProductSelection } from '../embed/email';
 import type { MaterialId, ProductId } from '../core/types';
+import { COUNTRIES } from '../data/countries';
 import { MATERIALS } from '../data/palette';
 import { PRODUCT_LIST } from '../data/products';
 import { STR } from '../strings';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SAMPLE_MATERIAL_MAX = 5;
 const PROJECT_PHASES = [
   STR.phaseConcept,
   STR.phasePreliminaryDesign,
@@ -29,10 +31,24 @@ function toggle<T>(list: readonly T[], value: T): T[] {
 }
 
 function hasValidSampleSelections(selections: readonly SampleProductSelection[]): boolean {
+  const materialCount = countSampleMaterials(selections);
   return (
     selections.length > 0 &&
-    selections.every((selection) => selection.materialIds.length > 0 && selection.materialIds.length <= 3)
+    materialCount > 0 &&
+    materialCount <= SAMPLE_MATERIAL_MAX &&
+    selections.every((selection) => selection.materialIds.length > 0)
   );
+}
+
+function countSampleMaterials(selections: readonly SampleProductSelection[]): number {
+  return selections.reduce((sum, selection) => sum + selection.materialIds.length, 0);
+}
+
+function searchableCountryText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
 }
 
 /**
@@ -64,10 +80,12 @@ export function LeadCaptureModal({
   const [quoteProducts, setQuoteProducts] = useState<ProductId[]>(
     request.quoteDefaults?.productIds ?? [],
   );
-  const [street, setStreet] = useState(request.sampleDefaults?.street ?? '');
+  const [streetName, setStreetName] = useState(request.sampleDefaults?.streetName ?? '');
+  const [streetNumber, setStreetNumber] = useState(request.sampleDefaults?.streetNumber ?? '');
+  const [streetAddition, setStreetAddition] = useState(request.sampleDefaults?.streetAddition ?? '');
   const [postalCode, setPostalCode] = useState(request.sampleDefaults?.postalCode ?? '');
   const [city, setCity] = useState(request.sampleDefaults?.city ?? '');
-  const [country, setCountry] = useState(request.sampleDefaults?.country ?? STR.defaultCountry);
+  const [country, setCountry] = useState(request.sampleDefaults?.country ?? '');
   const [sampleSelections, setSampleSelections] = useState<SampleProductSelection[]>(
     request.sampleDefaults?.selections ?? [],
   );
@@ -112,12 +130,15 @@ export function LeadCaptureModal({
     }
 
     if (request.mode === 'sample') {
-      const cleanStreet = street.trim();
+      const cleanStreetName = streetName.trim();
+      const cleanStreetNumber = streetNumber.trim();
+      const cleanStreetAddition = streetAddition.trim();
       const cleanPostalCode = postalCode.trim();
       const cleanCity = city.trim();
       const cleanCountry = country.trim();
       if (
-        !cleanStreet ||
+        !cleanStreetName ||
+        !cleanStreetNumber ||
         !cleanPostalCode ||
         !cleanCity ||
         !cleanCountry ||
@@ -127,7 +148,9 @@ export function LeadCaptureModal({
         return;
       }
       lead.sample = {
-        street: cleanStreet,
+        streetName: cleanStreetName,
+        streetNumber: cleanStreetNumber,
+        streetAddition: cleanStreetAddition || undefined,
         postalCode: cleanPostalCode,
         city: cleanCity,
         country: cleanCountry,
@@ -244,13 +267,33 @@ export function LeadCaptureModal({
         {request.mode === 'sample' && (
           <>
             <h4>{STR.sampleDetails}</h4>
+            <div className="row">
+              <div className="field" style={{ flex: 2 }}>
+                <label htmlFor="lead-street-name">{STR.streetName}</label>
+                <input
+                  id="lead-street-name"
+                  type="text"
+                  value={streetName}
+                  onChange={(e) => setStreetName(e.target.value)}
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="lead-street-number">{STR.streetNumber}</label>
+                <input
+                  id="lead-street-number"
+                  type="text"
+                  value={streetNumber}
+                  onChange={(e) => setStreetNumber(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="field">
-              <label htmlFor="lead-street">{STR.streetAndNumber}</label>
+              <label htmlFor="lead-street-addition">{STR.streetAddition}</label>
               <input
-                id="lead-street"
+                id="lead-street-addition"
                 type="text"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
+                value={streetAddition}
+                onChange={(e) => setStreetAddition(e.target.value)}
               />
             </div>
             <div className="row">
@@ -274,13 +317,7 @@ export function LeadCaptureModal({
               </div>
             </div>
             <div className="field">
-              <label htmlFor="lead-country">{STR.country}</label>
-              <input
-                id="lead-country"
-                type="text"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-              />
+              <CountryCombobox value={country} onChange={setCountry} />
             </div>
             <ProductChecks
               selected={sampleSelections.map((selection) => selection.productId)}
@@ -297,11 +334,7 @@ export function LeadCaptureModal({
               selections={sampleSelections}
               onToggle={(productId, materialId) =>
                 setSampleSelections((list) =>
-                  list.map((selection) =>
-                    selection.productId === productId
-                      ? { ...selection, materialIds: toggle(selection.materialIds, materialId).slice(0, 3) }
-                      : selection,
-                  ),
+                  toggleSampleMaterial(list, productId, materialId),
                 )
               }
             />
@@ -321,6 +354,93 @@ export function LeadCaptureModal({
       </form>
     </div>,
     document.body,
+  );
+}
+
+function toggleSampleMaterial(
+  selections: readonly SampleProductSelection[],
+  productId: ProductId,
+  materialId: MaterialId,
+): SampleProductSelection[] {
+  const total = countSampleMaterials(selections);
+  return selections.map((selection) => {
+    if (selection.productId !== productId) return selection;
+    if (selection.materialIds.includes(materialId)) {
+      return { ...selection, materialIds: selection.materialIds.filter((id) => id !== materialId) };
+    }
+    if (total >= SAMPLE_MATERIAL_MAX) return selection;
+    return { ...selection, materialIds: [...selection.materialIds, materialId] };
+  });
+}
+
+function CountryCombobox({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const query = searchableCountryText(value.replace(/[^\p{L}\p{N}\s'-]/gu, ' ').trim());
+  const matches = useMemo(
+    () =>
+      COUNTRIES.filter((country) => {
+        if (!query) return true;
+        return searchableCountryText(`${country.name} ${country.code}`).includes(query);
+      }),
+    [query],
+  );
+
+  return (
+    <div className="country-combobox">
+      <label htmlFor="lead-country">{STR.country}</label>
+      <input
+        id="lead-country"
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls="lead-country-options"
+        autoComplete="off"
+        placeholder={STR.countryPlaceholder}
+        value={value}
+        onBlur={() => setOpen(false)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={(e) => {
+          setOpen(true);
+          e.currentTarget.select();
+        }}
+      />
+      {open && (
+        <div id="lead-country-options" className="country-options" role="listbox">
+          {matches.length > 0 ? (
+            matches.map((country) => (
+              <button
+                key={country.code}
+                type="button"
+                className="country-option"
+                role="option"
+                aria-selected={country.label === value}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(country.label);
+                  setOpen(false);
+                }}
+              >
+                <span className="country-flag">{country.flag}</span>
+                <span>{country.name}</span>
+                <span className="country-code">{country.code}</span>
+              </button>
+            ))
+          ) : (
+            <div className="country-option empty">{STR.countryNoResults}</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -360,19 +480,21 @@ function SampleMaterialChecks({
   onToggle: (productId: ProductId, materialId: MaterialId) => void;
 }) {
   if (selections.length === 0) return null;
+  const totalSelected = countSampleMaterials(selections);
+  const maxed = totalSelected >= SAMPLE_MATERIAL_MAX;
   return (
     <div className="field">
       <label>{STR.coloursAndShadesRequested}</label>
+      <p className="note" style={{ marginBottom: 6 }}>
+        {STR.sampleColoursTotalHint} ({totalSelected}/{SAMPLE_MATERIAL_MAX})
+      </p>
       <div className="choice-list">
         {selections.map((selection) => {
           const selectedSet = new Set(selection.materialIds);
-          const maxed = selection.materialIds.length >= 3;
           return (
             <div key={selection.productId}>
               <p className="note" style={{ marginBottom: 6 }}>
                 <strong>{PRODUCT_LIST.find((product) => product.id === selection.productId)?.name}</strong>
-                {' — '}
-                {STR.sampleColoursPerProductHint}
               </p>
               <div className="choice-grid">
                 {MATERIALS.map((material) => {
