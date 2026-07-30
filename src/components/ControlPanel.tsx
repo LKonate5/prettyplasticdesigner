@@ -197,7 +197,6 @@ export function ControlPanel({
         product={product}
         schedule={schedule}
         order={order}
-        scene={scene}
         requireLead={requireLead}
       />
 

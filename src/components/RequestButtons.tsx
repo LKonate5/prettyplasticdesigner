@@ -3,24 +3,12 @@ import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { ProductSpec } from '../core/types';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
-import { blobToBase64, openMail, quoteEmail, sampleEmail, submitEmail, withLead } from '../embed/email';
-import type { SceneInput } from '../export/svg';
+import { openMail, quoteEmail, sampleEmail, submitEmail, withLead } from '../embed/email';
 import { EmailPreviewModal } from './EmailPreviewModal';
 import { STR } from '../strings';
 
 type Status = { kind: 'idle' } | { kind: 'busy' } | { kind: 'sent' } | { kind: 'error'; message: string };
 type Preview = { kind: 'sample' | 'quote'; subject: string; body: string };
-
-const QUOTE_ATTACHMENT_PX_PER_MM = 0.3;
-const QUOTE_ATTACHMENT_MAX_EDGE = 1100;
-const QUOTE_ATTACHMENT_JPEG_QUALITY = 0.68;
-const QUOTE_ATTACHMENT_MAX_BASE64 = 700_000; // keep the full JSON request below strict proxy/serverless body limits
-const oversizedPreviewNote =
-  'Preview image omitted because the generated wall image was too large for email. The design link above remains available.';
-
-function looksLikeOversizedRequest(error?: string): boolean {
-  return Boolean(error && (error.includes('413') || error.toLowerCase().includes('too large')));
-}
 
 /**
  * "Request a sample" and "Request a quote" — both actually SEND an email to
@@ -39,14 +27,12 @@ export function RequestButtons({
   product,
   schedule,
   order,
-  scene,
   requireLead,
 }: {
   design: DesignState;
   product: ProductSpec;
   schedule: Schedule;
   order: Order;
-  scene: SceneInput;
   /** Shared with ExportMenu — asks once per visit (see ControlPanel). */
   requireLead: (
     label: string,
@@ -113,44 +99,12 @@ export function RequestButtons({
   const sendQuote = async (subject: string, body: string) => {
     setPreview(null);
     setQuoteStatus({ kind: 'busy' });
-    try {
-      const { renderRaster } = await import('../export/raster');
-      const { blob } = await renderRaster(scene, 'jpeg', QUOTE_ATTACHMENT_PX_PER_MM, {
-        legend: schedule,
-        maxEdge: QUOTE_ATTACHMENT_MAX_EDGE,
-        quality: QUOTE_ATTACHMENT_JPEG_QUALITY,
-      });
-      const contentBase64 = await blobToBase64(blob);
-      const attachment =
-        contentBase64.length <= QUOTE_ATTACHMENT_MAX_BASE64
-          ? { filename: `pretty-plastic_${product.id}_wall.jpg`, contentBase64 }
-          : undefined;
-      const message = attachment ? body : `${body}\n\n${oversizedPreviewNote}`;
-      const result = await submitEmail(subject, message, attachment);
-      if (result.ok) {
-        setQuoteStatus({ kind: 'sent' });
-        return;
-      }
-      if (attachment && looksLikeOversizedRequest(result.error)) {
-        const retry = await submitEmail(subject, `${body}\n\n${oversizedPreviewNote}`);
-        if (retry.ok) {
-          setQuoteStatus({ kind: 'sent' });
-          return;
-        }
-      }
-      throw new Error(result.error);
-    } catch (err) {
-      // fallback: download the image + open mail app, same as before the API existed
-      try {
-        const { exportRaster } = await import('../export/raster');
-        await exportRaster(scene, 'png', 2, `pretty-plastic_${product.id}_wall.png`, {
-          legend: schedule,
-        });
-      } catch {
-        /* image render failed too — still offer the mailto with the text-only body */
-      }
-      openMail(subject, `${body}\n\n${STR.quoteImageNote}`);
-      setQuoteStatus({ kind: 'error', message: `${STR.emailFallback} (${(err as Error).message})` });
+    const result = await submitEmail(subject, body);
+    if (result.ok) {
+      setQuoteStatus({ kind: 'sent' });
+    } else {
+      openMail(subject, body);
+      setQuoteStatus({ kind: 'error', message: `${STR.emailFallback} (${result.error})` });
     }
   };
 

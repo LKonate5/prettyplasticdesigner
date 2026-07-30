@@ -51,6 +51,7 @@ describe('lead email content', () => {
     });
     expect(body).toContain('Requested area: 42 m²');
     expect(body).toContain('Products: First One, Basic Third');
+    expect(body).toContain('Design link: #d=');
   });
 
   it('includes address, products and colours in sample emails', () => {
@@ -72,5 +73,6 @@ describe('lead email content', () => {
     expect(body).toContain('Netherlands 🇳🇱');
     expect(body).toContain('Second High: Green Medium, Grey Dark');
     expect(body).toContain('Basic Third: Ochre Light');
+    expect(body).toContain('Design link: #d=');
   });
 });

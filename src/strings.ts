@@ -94,10 +94,9 @@ export const STR = {
 
   requestSample: 'Request a sample',
   requestQuote: 'Request a quote',
-  requestHint: 'Sends your design straight to Pretty Plastic. The quote also attaches an image of your wall.',
+  requestHint: 'Sends your request and a link to this exact design straight to Pretty Plastic.',
   emailSent: 'Sent! Pretty Plastic will be in touch.',
   emailFallback: 'Could not send directly, so we opened your email app instead — just hit send there.',
-  quoteImageNote: 'Wall image downloaded — please attach it to this email.',
 
   capNotice: 'That size would exceed 5,000 tiles — reduce rows or columns.',
   regenNote:

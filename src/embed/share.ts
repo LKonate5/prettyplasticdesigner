@@ -118,9 +118,16 @@ function isRotation(value: unknown): value is 0 | 90 | 180 | 270 {
   return value === 0 || value === 90 || value === 180 || value === 270;
 }
 
-/** Build the full shareable URL for a design (current page + design in the hash). */
+const PUBLIC_DESIGNER_URL = 'https://prettyplasticdesigner.vercel.app/';
+
+/** Build the full shareable URL for a design (public page + design in the hash). */
 export function shareUrl(design: DesignState): string {
-  const base = typeof location !== 'undefined' ? location.href.split('#')[0] : '';
+  const base =
+    typeof location !== 'undefined'
+      ? location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? PUBLIC_DESIGNER_URL
+        : location.href.split('#')[0]
+      : '';
   return `${base}#d=${encodeDesign(design)}`;
 }
 
