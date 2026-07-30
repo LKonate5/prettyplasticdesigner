@@ -11,10 +11,16 @@ import { STR } from '../strings';
 type Status = { kind: 'idle' } | { kind: 'busy' } | { kind: 'sent' } | { kind: 'error'; message: string };
 type Preview = { kind: 'sample' | 'quote'; subject: string; body: string };
 
-const QUOTE_ATTACHMENT_PX_PER_MM = 0.45;
-const QUOTE_ATTACHMENT_MAX_EDGE = 1600;
-const QUOTE_ATTACHMENT_JPEG_QUALITY = 0.76;
-const QUOTE_ATTACHMENT_MAX_BASE64 = 2_500_000; // keep the full JSON request comfortably below Vercel's body limit
+const QUOTE_ATTACHMENT_PX_PER_MM = 0.3;
+const QUOTE_ATTACHMENT_MAX_EDGE = 1100;
+const QUOTE_ATTACHMENT_JPEG_QUALITY = 0.68;
+const QUOTE_ATTACHMENT_MAX_BASE64 = 700_000; // keep the full JSON request below strict proxy/serverless body limits
+const oversizedPreviewNote =
+  'Preview image omitted because the generated wall image was too large for email. The design link above remains available.';
+
+function looksLikeOversizedRequest(error?: string): boolean {
+  return Boolean(error && (error.includes('413') || error.toLowerCase().includes('too large')));
+}
 
 /**
  * "Request a sample" and "Request a quote" — both actually SEND an email to
@@ -119,13 +125,18 @@ export function RequestButtons({
         contentBase64.length <= QUOTE_ATTACHMENT_MAX_BASE64
           ? { filename: `pretty-plastic_${product.id}_wall.jpg`, contentBase64 }
           : undefined;
-      const message = attachment
-        ? body
-        : `${body}\n\nPreview image omitted because the generated wall image was too large for email. The design link above remains available.`;
+      const message = attachment ? body : `${body}\n\n${oversizedPreviewNote}`;
       const result = await submitEmail(subject, message, attachment);
       if (result.ok) {
         setQuoteStatus({ kind: 'sent' });
         return;
+      }
+      if (attachment && looksLikeOversizedRequest(result.error)) {
+        const retry = await submitEmail(subject, `${body}\n\n${oversizedPreviewNote}`);
+        if (retry.ok) {
+          setQuoteStatus({ kind: 'sent' });
+          return;
+        }
       }
       throw new Error(result.error);
     } catch (err) {
