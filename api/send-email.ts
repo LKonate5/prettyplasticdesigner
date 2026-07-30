@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendEmail } from './_lib/sendEmail';
+import { sendEmail } from './_lib/sendEmail.js';
 
 /**
  * POST /api/send-email — the only place RESEND_API_KEY is used. The browser
