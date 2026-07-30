@@ -10,12 +10,7 @@ import { Resend } from 'resend';
  * Pretty Plastic's Resend account.
  */
 
-// Resend's shared testing sender — works without verifying a domain, but has
-// no reputation of its own, so mail lands in spam (confirmed by a test send).
-// send.prettyplastic.nl already has SPF/DKIM DNS records, but Resend still
-// reports it as unverified — the domain needs to be added under
-// https://resend.com/domains before FROM_EMAIL can switch to it.
-const FROM_EMAIL = 'onboarding@resend.dev';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Pretty Plastic Designer <info@prettyplastic.nl>';
 const SALES_EMAIL = process.env.SALES_EMAIL || 'info@prettyplastic.nl';
 
 const MAX_SUBJECT = 200;
