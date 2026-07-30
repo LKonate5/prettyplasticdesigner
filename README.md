@@ -50,8 +50,9 @@ npm run preview  # optional: preview that built site locally
 
 Everything the tool needs is inside **`dist/`** after this. Upload that
 folder's contents to any static host — Netlify, Vercel, GitHub Pages, Cloudflare
-Pages, or even a plain web-server folder. You'll get a public URL like
-`https://pretty-plastic-designer.netlify.app/`.
+Pages, or even a plain web-server folder. The current live deployment is:
+
+`https://prettyplasticdesigner.vercel.app/`
 
 > The build uses relative asset paths (`base: './'`), so it works no matter what
 > sub-path it ends up hosted under.
@@ -62,35 +63,54 @@ Pages, or even a plain web-server folder. You'll get a public URL like
 
 1. Host the built site (previous step) and copy its public URL.
 2. In Squarespace, edit the page → **Add Block → Code**.
-3. Paste this, replacing the URL with yours:
+3. Paste this Code Block:
+
+```html
+<div id="pp-designer-embed">
+  <iframe
+    id="pp-designer"
+    src="https://prettyplasticdesigner.vercel.app/"
+    title="Pretty Plastic Facade Designer"
+    loading="lazy"
+    allow="clipboard-write"
+    style="width:100%; height:820px; border:0; display:block;"
+  ></iframe>
+</div>
+
+<script>
+  (function () {
+    var iframe = document.getElementById('pp-designer');
+    if (!iframe) return;
+
+    var allowedOrigin = new URL(iframe.src).origin;
+
+    window.addEventListener('message', function (e) {
+      if (e.origin !== allowedOrigin) return;
+      if (e.data && e.data.type === 'pp-designer:height') {
+        iframe.style.height = Math.max(720, e.data.height) + 'px';
+      }
+    });
+  })();
+</script>
+```
+
+That's it — the iframe starts at 820 px high and then resizes itself when
+Squarespace allows scripts in the Code Block. The panel collapses to a menu
+button on narrow screens.
+
+If Squarespace strips the `<script>` from the Code Block, keep only the
+`<div>`/`<iframe>` there and put the `<script>` part in **Settings → Advanced →
+Code Injection → Footer**.
 
 ```html
 <iframe
-  src="https://YOUR-HOSTED-URL/"
+  id="pp-designer"
+  src="https://prettyplasticdesigner.vercel.app/"
   title="Pretty Plastic Facade Designer"
-  style="width:100%; height:820px; border:0;"
   loading="lazy"
+  allow="clipboard-write"
+  style="width:100%; height:820px; border:0; display:block;"
 ></iframe>
-```
-
-That's it — a fixed 820 px height works well on desktop and the panel collapses
-to a menu button on narrow screens.
-
-### Optional: auto-resize the iframe to its content
-
-The app posts its height to the parent page. If you want the iframe to grow/
-shrink to fit (no inner scrollbar), add this **below** the iframe in the same
-Code block, and give the iframe an `id="pp-designer"`:
-
-```html
-<script>
-  window.addEventListener('message', function (e) {
-    if (e.data && e.data.type === 'pp-designer:height') {
-      var f = document.getElementById('pp-designer');
-      if (f) f.style.height = e.data.height + 'px';
-    }
-  });
-</script>
 ```
 
 ---
