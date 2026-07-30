@@ -1,5 +1,4 @@
 import { Resend } from 'resend';
-import { SALES_EMAIL } from '../../src/config';
 
 /**
  * Server-only Resend integration. This file lives under api/ (never imported
@@ -17,6 +16,7 @@ import { SALES_EMAIL } from '../../src/config';
 // reports it as unverified — the domain needs to be added under
 // https://resend.com/domains before FROM_EMAIL can switch to it.
 const FROM_EMAIL = 'onboarding@resend.dev';
+const SALES_EMAIL = process.env.SALES_EMAIL || 'info@prettyplastic.nl';
 
 const MAX_SUBJECT = 200;
 const MAX_TEXT = 20_000;
