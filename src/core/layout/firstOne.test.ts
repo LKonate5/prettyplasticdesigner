@@ -8,10 +8,10 @@ describe('First One layout', () => {
     expect(tilesPerM2).toBeCloseTo(22.2, 6);
   });
 
-  it('wall dimensions follow the pitch formulas', () => {
+  it('public rows map to two internal half-row pitches per physical course', () => {
     const l = layoutFirstOne(6, 5);
     expect(l.wallW).toBeCloseTo(5 * 304, 6);
-    expect(l.wallH).toBeCloseTo(6 * FO_ROW_PITCH, 6);
+    expect(l.wallH).toBeCloseTo(6 * 2 * FO_ROW_PITCH, 6);
   });
 
   it('visible tiles cover the wall rectangle exactly (no gaps, no overlaps)', () => {
@@ -20,10 +20,11 @@ describe('First One layout', () => {
     expect(covered).toBeCloseTo(l.wallW * l.wallH, 1);
   });
 
-  it('logical cell count is rows×cols (wrap partners collapse to one)', () => {
+  it('logical cells use the internal half-row pattern (wrap partners collapse to one)', () => {
     const l = layoutFirstOne(4, 3);
-    expect(l.cellCount).toBe(12);
-    expect(l.patternRows).toBe(4);
+    expect(l.rows).toBe(4);
+    expect(l.cellCount).toBe(24);
+    expect(l.patternRows).toBe(8);
     expect(l.patternCols).toBe(3);
     // more physical tiles than cells, because cut edge tiles are placed too
     expect(l.tiles.length).toBeGreaterThan(l.cellCount);
@@ -67,17 +68,17 @@ describe('First One layout', () => {
     }
   });
 
-  it('torus period is available only for even rows', () => {
-    expect(layoutFirstOne(4, 3).torusPeriod).toEqual({ w: 3 * 304, h: 4 * FO_ROW_PITCH });
-    expect(layoutFirstOne(5, 3).torusPeriod).toBeNull();
+  it('every physical row count is seamless because it expands to an even internal row count', () => {
+    expect(layoutFirstOne(4, 3).torusPeriod).toEqual({ w: 3 * 304, h: 8 * FO_ROW_PITCH });
+    expect(layoutFirstOne(5, 3).torusPeriod).toEqual({ w: 3 * 304, h: 10 * FO_ROW_PITCH });
   });
 
-  it('interior tiles get 4 nested lap-shadow bands on each of their 2 upper edges', () => {
+  it('interior tiles get subtle lap-shadow bands on each upper edge', () => {
     const l = layoutFirstOne(8, 6);
     const interior = l.tiles.filter((t) => !t.cut);
     expect(interior.length).toBeGreaterThan(0);
     for (const t of interior) {
-      expect(t.shadowStrips.length).toBe(8); // 4 depths × 2 edges, all uncut
+      expect(t.shadowStrips.length).toBe(4); // 2 depths × 2 edges, all uncut
       for (const strip of t.shadowStrips) expect(strip.length).toBe(4); // each band is a quad
     }
   });

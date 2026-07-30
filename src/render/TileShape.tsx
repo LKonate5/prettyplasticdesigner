@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { Material, Pt, Tile } from '../core/types';
+import type { Material, Pt, Tile, TileRotation } from '../core/types';
 
 const fmt = (n: number): string => {
   const r = Math.round(n * 1000) / 1000;
@@ -41,6 +41,7 @@ interface TileShapeProps {
   /** −1..1 tone nudge for this tile (see toneJitterFor); scaled by TONE_JITTER. */
   toneJitter: number;
   productId: string;
+  rotation: TileRotation;
 }
 
 /**
@@ -48,11 +49,8 @@ interface TileShapeProps {
  * Cut edge tiles draw their full shape and get clipped by the shared wall
  * clipPath, so overlays (facets, bands, photos) are cut with the tile.
  *
- * Photos are drawn in their NATIVE orientation, never rotated or mirrored: the
- * relief and the light are baked into the photo, so turning it would turn the
- * light with it (see Cell in core/types.ts). Second High draws its square photo
- * straight; First One draws its diamond photo clipped to the shared #pp-diamond
- * rhombus, keeping the tile's hanging nose to the north. Basic Third always
+ * Second High may rotate as a physical design choice, so its photo and facet
+ * transform together. First One keeps its hanging nose to the north. Basic Third always
  * keeps its true hex colour (no borrowed photo — a borrowed marble crop can't
  * match its defined palette swatches) plus a subtle top-to-bottom
  * #pp-marble-fade tint and its 3 vertical relief bands (#pp-bands), since that
@@ -65,6 +63,7 @@ export const TileShape = memo(function TileShape({
   texUrl,
   toneJitter,
   productId,
+  rotation,
 }: TileShapeProps) {
   const [x, y] = tile.polygon[0];
   const second = productId === 'second-high';
@@ -109,8 +108,13 @@ export const TileShape = memo(function TileShape({
     );
   }
 
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const transform = second && rotation ? `rotate(${rotation} ${fmt(cx)} ${fmt(cy)})` : undefined;
+
   return (
-    <g data-cell={tile.cellIndex} clipPath={tile.cut ? 'url(#pp-wall-clip)' : undefined}>
+    <g data-cell={tile.cellIndex} data-row={tile.row} data-col={tile.col} clipPath={tile.cut ? 'url(#pp-wall-clip)' : undefined}>
+      <g transform={transform}>
       {content}
       {/* Tone nudge: keeps same-coloured photo tiles from reading as one stamp
           repeated. Lightness only — the relief and its light stay untouched. */}
@@ -140,6 +144,7 @@ export const TileShape = memo(function TileShape({
       {tile.lipStrips.map((strip, i) => (
         <polygon key={`lip-${i}`} points={pointsAttr(strip)} fill={LIP_FILL} />
       ))}
+      </g>
     </g>
   );
 });

@@ -31,7 +31,8 @@ export function computeLayout(
 /**
  * Convert a real-world wall size (metres) into rows × columns for a product.
  * Architects think in metres, not tile counts. Rounds to the nearest whole
- * tile (min 1); the reducer then snaps offset products to an even row count.
+ * tile (min 1); First One rows are physical courses, each spanning two of its
+ * internal diamond half-row pitches.
  */
 export function metresToGrid(
   product: ProductSpec,
@@ -44,7 +45,7 @@ export function metresToGrid(
   const atLeast1 = (n: number) => Math.max(1, Math.round(n));
   switch (product.id) {
     case 'first-one':
-      return { cols: atLeast1(w / FO_PITCH_X), rows: atLeast1(h / FO_ROW_PITCH) };
+      return { cols: atLeast1(w / FO_PITCH_X), rows: atLeast1(h / (2 * FO_ROW_PITCH)) };
     case 'second-high':
       return { cols: atLeast1(w / SH_PITCH), rows: atLeast1(h / SH_PITCH) };
     case 'basic-third':
@@ -52,4 +53,3 @@ export function metresToGrid(
       return { cols: atLeast1(w / BT_W), rows: atLeast1((h - BT_H) / options.exposure + 1) };
   }
 }
-

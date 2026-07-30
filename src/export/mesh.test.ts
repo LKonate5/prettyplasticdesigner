@@ -72,6 +72,24 @@ describe('3D mesh', () => {
     expect(front).toBeGreaterThan(0);
     expect(back).toBeGreaterThan(0);
   });
+
+  it('models product relief as real depth, not just a flat front cap', () => {
+    const second = meshFor('second-high', 1, 1).mesh;
+    const secondZ = new Set(second.groups.flatMap((g) => g.positions.filter((_, i) => i % 3 === 2)));
+    expect(secondZ.size).toBeGreaterThanOrEqual(3); // back, facet base, raised apex
+
+    const basic = meshFor('basic-third', 1, 1).mesh;
+    const basicZ = new Set(basic.groups.flatMap((g) => g.positions.filter((_, i) => i % 3 === 2)));
+    expect(basicZ.size).toBeGreaterThanOrEqual(3); // back, front, raised band
+  });
+
+  it('rotating a Second High tile changes its faceted mesh geometry', () => {
+    const { product, layout, cells } = meshFor('second-high', 1, 1);
+    const first = buildWallMesh(product, layout, cells);
+    cells[0] = { ...cells[0], rotation: 90 };
+    const second = buildWallMesh(product, layout, cells);
+    expect(second.groups.flatMap((g) => g.positions)).not.toEqual(first.groups.flatMap((g) => g.positions));
+  });
 });
 
 describe('GLB writer', () => {

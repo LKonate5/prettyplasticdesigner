@@ -21,11 +21,14 @@ import { clipPolygonToRect, insetQuad, polygonsDiffer } from '../geometry';
  * real fish-scale wall has. Drawing only the shadow (as this once did) reads
  * flat, because nothing marks the raised edge.
  *
- * Tileability: the wall is a clean rectangle with cut half-diamonds at every
- * edge. Each cut tile shares a cell with its wrap partner (the matching half on
- * the opposite edge), so the whole wall is one seamless repeat. Requires an
- * even row count so the offset/aligned row parity matches across the top/bottom
- * wrap — the reducer snaps rows to even for this product.
+ * Public rows are physical visible courses. Each course is represented by two
+ * internal half-rows so it is comparable to columns in the UI while retaining
+ * the original seamless diamond geometry. Tileability: the wall is a clean
+ * rectangle with cut half-diamonds at every edge. Each cut tile shares a cell
+ * with its wrap partner (the matching half on the opposite edge), so the whole
+ * wall is one seamless repeat. Public rows always expand to an even internal
+ * half-row count, so offset/aligned row parity matches across the top/bottom
+ * wrap without changing the user's entered value.
  */
 
 export const FO_PITCH_X = 304;
@@ -34,10 +37,10 @@ const HALF = FO_PITCH_X / 2;
 // Nested bands of the SAME translucent fill, narrowest closest to the true lap
 // edge: rendered stacked, alpha compositing turns this into a soft falloff
 // (a single flat 7 mm stripe read as too thin/flat once real photos landed).
-const SHADOW_DEPTHS = [12, 8, 5, 2];
+const SHADOW_DEPTHS = [7, 3];
 // The lit lip is the tile's 29 mm edge seen face-on, so it is narrow and hard —
 // one band, no falloff. Widening it turns the seam into a painted stripe.
-const LIP_DEPTH = 3.5;
+const LIP_DEPTH = 1.5;
 
 function diamond(cx: number, cy: number): Pt[] {
   return [
@@ -66,22 +69,23 @@ const mod = (n: number, m: number): number => ((n % m) + m) % m;
 
 export function layoutFirstOne(rows: number, cols: number): Layout {
   const RP = FO_ROW_PITCH;
+  const patternRows = rows * 2;
   const wallW = cols * FO_PITCH_X;
   // Wall height is an exact multiple of the row pitch so the top and bottom
   // half-diamond rows have the same offset parity — that's what lets them merge
   // (and share a colour) into whole diamonds when the wall is tiled vertically.
-  const wallH = rows * RP;
+  const wallH = patternRows * RP;
   const tiles: Tile[] = [];
 
   // Diamond centres at cy = k·RP for k = 0 (top half-row) .. rows (bottom
   // half-row). Draw ascending row index (bottom first) so higher rows lap lower.
-  for (let k = rows; k >= 0; k--) {
+  for (let k = patternRows; k >= 0; k--) {
     const cy = k * RP;
     const { count, cx } = rowColumns(k, cols);
-    const rowIdx = rows - k; // 0 = bottom
+    const rowIdx = patternRows - k; // 0 = bottom
     // Canonical wrapped row: k=0 (top) and k=rows (bottom) both map to 0, so
     // the two half-rows share a cell and merge seamlessly across the wrap.
-    const patternRow = mod(k, rows);
+    const patternRow = mod(k, patternRows);
     for (let c = 0; c < count; c++) {
       const polygon = diamond(cx(c), cy);
       const clip = clipPolygonToRect(polygon, 0, 0, wallW, wallH);
@@ -136,9 +140,9 @@ export function layoutFirstOne(rows: number, cols: number): Layout {
     rows,
     cols,
     tiles,
-    cellCount: rows * cols,
-    patternRows: rows,
+    cellCount: patternRows * cols,
+    patternRows,
     patternCols: cols,
-    torusPeriod: rows % 2 === 0 ? { w: wallW, h: wallH } : null,
+    torusPeriod: { w: wallW, h: wallH },
   };
 }

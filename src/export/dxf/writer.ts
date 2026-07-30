@@ -164,12 +164,16 @@ function writeEntities(
     const material = materialAt(cells[tile.cellIndex]?.material ?? 0);
     lwpolyline(b, tile.exportPolygon.map(flipY), material.dxfLayer, hexToInt(material.hex), true);
 
-    // Second High: emit the facet apex "V" so the relief survives in CAD. Every
-    // tile is laid the same way up (see Cell in core/types.ts), so this is the
-    // one canonical orientation — no per-tile transform.
+    // Second High: emit the rotated facet apex "V" so the relief survives in CAD.
     if (product.id === 'second-high') {
       const [x, y] = tile.polygon[0];
-      lwpolyline(b, facetApex(x, y).map(flipY), 'PP_FACETS', undefined, false);
+      lwpolyline(
+        b,
+        rotateFacet(facetApex(x, y), x, y, cells[tile.cellIndex]?.rotation ?? 0).map(flipY),
+        'PP_FACETS',
+        undefined,
+        false,
+      );
     }
   }
 
@@ -225,6 +229,18 @@ function facetApex(x: number, y: number): Pt[] {
     [x + size, y],
     [x + ax, y + ay],
   ];
+}
+
+function rotateFacet(points: Pt[], x: number, y: number, rotation: number): Pt[] {
+  if (!rotation) return points;
+  const { size } = SH_FACET;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const rad = (rotation * Math.PI) / 180;
+  return points.map(([px, py]) => [
+    cx + (px - cx) * Math.cos(rad) - (py - cy) * Math.sin(rad),
+    cy + (px - cx) * Math.sin(rad) + (py - cy) * Math.cos(rad),
+  ]);
 }
 
 function hexToInt(hex: string): number {

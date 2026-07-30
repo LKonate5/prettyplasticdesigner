@@ -11,10 +11,9 @@ import { PRODUCTS } from '../data/products';
  * hand-painted cells that DIFFER from what the pattern would generate, so the
  * string stays small (a fresh auto-generated design carries no overrides).
  *
- * Back-compat: links minted before tile rotation was retired carry an `rr`
- * flag and 3-element overrides ([cellIndex, material, rotation]). Both are read
- * and discarded, so an old link still reopens — minus the rotations, which the
- * renderer no longer honours anyway.
+ * Rotation is only meaningful for Second High. Its override records carry a
+ * third value when needed; two-value records from earlier links still decode
+ * as an unrotated tile.
  */
 
 interface Packed {
@@ -32,7 +31,7 @@ interface Packed {
   sdir: 'horizontal' | 'vertical';
   sw: number; // stripe width
   w: number; // waste fraction
-  o: [number, number][]; // overrides: [cellIndex, material]
+  o: Array<[number, number] | [number, number, 0 | 90 | 180 | 270]>;
 }
 
 const PRODUCT_IDS: ProductId[] = ['first-one', 'second-high', 'basic-third'];
@@ -49,10 +48,12 @@ function baselineCells(design: DesignState): Cell[] {
 
 export function encodeDesign(design: DesignState): string {
   const base = baselineCells(design);
-  const overrides: [number, number][] = [];
+  const overrides: Packed['o'] = [];
   design.cells.forEach((cell, i) => {
     const b = base[i];
-    if (!b || b.material !== cell.material) overrides.push([i, cell.material]);
+    if (!b || b.material !== cell.material || cell.rotation) {
+      overrides.push(cell.rotation ? [i, cell.material, cell.rotation] : [i, cell.material]);
+    }
   });
   const packed: Packed = {
     p: design.productId,
@@ -98,16 +99,23 @@ export function decodeDesign(str: string): DesignState | null {
       cells: [],
       wastePct: typeof packed.w === 'number' ? packed.w : DEFAULT_WASTE,
     };
-    // regenerate the baseline, then apply the hand-painted overrides. Old links
-    // carry a third element (rotation) — destructuring simply ignores it.
+    // Regenerate the baseline, then apply hand-painted material and T2 rotation
+    // overrides. Rotation from old links is accepted too.
     design.cells = baselineCells(design);
-    for (const [i, material] of packed.o ?? []) {
-      if (design.cells[i]) design.cells[i] = { material };
+    for (const [i, material, rotation] of packed.o ?? []) {
+      if (!design.cells[i]) continue;
+      design.cells[i] = packed.p === 'second-high' && isRotation(rotation)
+        ? { material, rotation }
+        : { material };
     }
     return design;
   } catch {
     return null;
   }
+}
+
+function isRotation(value: unknown): value is 0 | 90 | 180 | 270 {
+  return value === 0 || value === 90 || value === 180 || value === 270;
 }
 
 /** Build the full shareable URL for a design (current page + design in the hash). */

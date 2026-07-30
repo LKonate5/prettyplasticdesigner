@@ -39,6 +39,8 @@ export interface AppState {
   lastCommitKind: string | null;
   ui: {
     brush: MaterialId;
+    selectedCell: number | null;
+    rotationTool: 'tile' | 'row' | 'column' | null;
     /** True when the last grid/product change was refused by the tile cap. */
     capNotice: boolean;
   };
@@ -49,18 +51,18 @@ const GRID_MIN = 1;
 const GRID_MAX = 80;
 
 export const DEFAULT_GRID: Record<ProductId, { rows: number; cols: number }> = {
-  'first-one': { rows: 20, cols: 10 }, // ≈ 3.0 × 3.1 m
+  'first-one': { rows: 10, cols: 10 }, // ≈ 3.0 × 3.0 m; rows are physical courses
   'second-high': { rows: 10, cols: 10 }, // 3 × 3 m
   'basic-third': { rows: 8, cols: 9 }, // ≈ 3.6 × 3.0 m (even rows → staggered tiles seamlessly)
 };
 
 /**
- * Offset products (First One always; Basic Third when staggered) only tile
- * cleanly top-to-bottom with an even row count, so snap rows to even. Keeps the
- * wall a true seamless repeat without the user having to think about it.
+ * A staggered Basic Third bond only tiles cleanly top-to-bottom with an even
+ * row count. First One uses two internal half-rows for every public physical
+ * row, so its public value is seamless without snapping.
  */
 export function snapRows(productId: ProductId, options: ProductOptions, rows: number): number {
-  const offset = productId === 'first-one' || (productId === 'basic-third' && options.bond === 'staggered');
+  const offset = productId === 'basic-third' && options.bond === 'staggered';
   if (!offset || rows % 2 === 0) return rows;
   return Math.max(2, rows + 1);
 }
@@ -119,7 +121,7 @@ export function appStateFromDesign(present: DesignState): AppState {
     future: [],
     strokeBase: null,
     lastCommitKind: null,
-    ui: { brush: 'ochre-medium', capNotice: false },
+    ui: { brush: 'ochre-medium', selectedCell: null, rotationTool: null, capNotice: false },
   };
 }
 
@@ -159,10 +161,11 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'SET_PRODUCT': {
       if (action.productId === p.productId) return state;
       const { rows, cols } = DEFAULT_GRID[action.productId];
-      return commit(
+      const next = commit(
         state,
         buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern, p.wastePct),
       );
+      return { ...next, ui: { ...next.ui, selectedCell: null, rotationTool: null } };
     }
 
     case 'SET_GRID': {
@@ -235,6 +238,38 @@ export function appReducer(state: AppState, action: Action): AppState {
       return strokeEdit(state, { ...p, cells });
     }
 
+    case 'SELECT_CELL':
+      return action.cellIndex >= 0 && action.cellIndex < p.cells.length
+        ? { ...state, ui: { ...state.ui, selectedCell: action.cellIndex } }
+        : state;
+
+    case 'SET_ROTATION_TOOL':
+      return {
+        ...state,
+        ui: { ...state.ui, rotationTool: p.productId === 'second-high' ? action.tool : null },
+      };
+
+    case 'ROTATE_CELL': {
+      if (p.productId !== 'second-high' || !p.cells[action.cellIndex]) return state;
+      const cells = [...p.cells];
+      const cell = cells[action.cellIndex];
+      const rotation = action.rotation ?? nextRotation(cell.rotation);
+      if (cell.rotation === rotation) return state;
+      cells[action.cellIndex] = { ...cell, rotation };
+      return commit(state, { ...p, cells });
+    }
+
+    case 'ROTATE_ROW':
+      return rotateWhere(state, (tile) => tile.row === action.row);
+
+    case 'ROTATE_COLUMN':
+      return rotateWhere(state, (tile) => tile.col === action.col);
+
+    case 'RESET_ROTATIONS': {
+      if (p.productId !== 'second-high' || !p.cells.some((cell) => cell.rotation)) return state;
+      return commit(state, { ...p, cells: p.cells.map(({ material }) => ({ material })) });
+    }
+
     case 'STROKE_END':
       return state.strokeBase ? { ...state, strokeBase: null } : state;
 
@@ -266,6 +301,25 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'SET_BRUSH':
       return { ...state, ui: { ...state.ui, brush: action.brush } };
   }
+}
+
+function nextRotation(rotation: Cell['rotation']): 0 | 90 | 180 | 270 {
+  return rotation === 90 ? 180 : rotation === 180 ? 270 : rotation === 270 ? 0 : 90;
+}
+
+function rotateWhere(
+  state: AppState,
+  matches: (tile: ReturnType<typeof computeLayout>['tiles'][number]) => boolean,
+): AppState {
+  const p = state.present;
+  if (p.productId !== 'second-high') return state;
+  const layout = computeLayout(PRODUCTS[p.productId], p.rows, p.cols, p.options);
+  const targets = new Set(layout.tiles.filter(matches).map((tile) => tile.cellIndex));
+  if (targets.size === 0) return state;
+  const cells = p.cells.map((cell, i) =>
+    targets.has(i) ? { ...cell, rotation: nextRotation(cell.rotation) } : cell,
+  );
+  return commit(state, { ...p, cells });
 }
 
 /**

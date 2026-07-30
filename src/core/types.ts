@@ -18,6 +18,7 @@ export interface Material {
 }
 
 export type ProductId = 'first-one' | 'second-high' | 'basic-third';
+export type TileRotation = 0 | 90 | 180 | 270;
 
 export interface ProductSpec {
   id: ProductId;
@@ -115,16 +116,11 @@ export interface PatternConfig {
 }
 
 /**
- * One logical tile. Colour only — tiles are never rotated or mirrored.
- *
- * Every Pretty Plastic tile is directional: First One hangs from a nose at its
- * north vertex, and Second High's relief wedge protrudes one specific way. The
- * photography is shot accordingly, lit from a single direction, so turning a
- * tile in the render would turn its light with it and produce a wall that
- * cannot physically exist (a 180° Second High reads as a dent, not a bump).
- * Variety between same-coloured tiles comes from the photo variant instead —
- * see variantFor() in render/textures.ts.
+ * One logical tile. Rotation is used by Second High only; other products keep
+ * their physical hanging/lapped orientation. Omitting it means 0° and keeps
+ * unedited designs compact in history and share links.
  */
 export interface Cell {
   material: number; // index into MATERIALS (small numbers keep undo snapshots cheap)
+  rotation?: TileRotation;
 }

@@ -24,4 +24,13 @@ describe('metresToGrid', () => {
       expect(g.cols).toBeGreaterThanOrEqual(1);
     }
   });
+
+  it('First One uses physical rows in both size directions', () => {
+    const product = PRODUCTS['first-one'];
+    const grid = metresToGrid(product, opts, 3, 3);
+    expect(grid).toEqual({ rows: 10, cols: 10 });
+    const layout = computeLayout(product, grid.rows, grid.cols, opts);
+    expect(layout.wallW).toBeCloseTo(3040, 6);
+    expect(layout.wallH).toBeCloseTo(20 * (1_000_000 / (22.2 * 304)), 6);
+  });
 });

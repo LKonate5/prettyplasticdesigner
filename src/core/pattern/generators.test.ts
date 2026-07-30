@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MATERIALS } from '../../data/palette';
 import { layoutFirstOne } from '../layout/firstOne';
 import { layoutSecondHigh } from '../layout/secondHigh';
+import type { Cell } from '../types';
 import type { MaterialId, PatternConfig, PatternType } from '../types';
 import { generatePattern } from './generators';
 
@@ -17,6 +18,49 @@ const base = (over: Partial<PatternConfig> = {}): PatternConfig => ({
 });
 
 const ALL_TYPES: PatternType[] = ['solid', 'random', 'gradient', 'stripes', 'checker'];
+
+const familyAt = (cell: Cell) => MATERIALS[cell.material].colour;
+
+function familyGrid(cells: Cell[], rows: number, cols: number): string[][] {
+  return Array.from({ length: rows }, (_, row) =>
+    Array.from({ length: cols }, (_, col) => familyAt(cells[row * cols + col])),
+  );
+}
+
+function hasFamilyRun(grid: string[][], length: number): boolean {
+  const rows = grid.length;
+  const cols = grid[0]?.length ?? 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const family = grid[row][col];
+      if (Array.from({ length }, (_, i) => grid[row][(col + i) % cols]).every((v) => v === family)) {
+        return true;
+      }
+      if (Array.from({ length }, (_, i) => grid[(row + i) % rows][col]).every((v) => v === family)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function hasFamilyBlock(grid: string[][]): boolean {
+  const rows = grid.length;
+  const cols = grid[0]?.length ?? 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const family = grid[row][col];
+      if (
+        grid[row][(col + 1) % cols] === family &&
+        grid[(row + 1) % rows][col] === family &&
+        grid[(row + 1) % rows][(col + 1) % cols] === family
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 describe('pattern generators', () => {
   it('same seed → identical design; different seed → different design', () => {
@@ -73,5 +117,37 @@ describe('pattern generators', () => {
     const colours = new Set(varied.map((c) => MATERIALS[c.material].colour));
     expect(colours.size).toBe(1); // shade may vary, colour never does
     expect(new Set(varied.map((c) => c.material)).size).toBeGreaterThan(1);
+  });
+
+  it('random mix avoids avoidable long colour-family runs', () => {
+    const layout = layoutSecondHigh(14, 16);
+    const cells = generatePattern(base({ seed: 107 }), layout);
+    expect(hasFamilyRun(familyGrid(cells, layout.patternRows, layout.patternCols), 3)).toBe(false);
+  });
+
+  it('random mix avoids avoidable 2x2 colour-family blocks', () => {
+    const layout = layoutSecondHigh(14, 16);
+    const cells = generatePattern(base({ seed: 211 }), layout);
+    expect(hasFamilyBlock(familyGrid(cells, layout.patternRows, layout.patternCols))).toBe(false);
+  });
+
+  it('random mix keeps colour families balanced on large walls', () => {
+    const layout = layoutSecondHigh(20, 20);
+    const cells = generatePattern(base({ seed: 309 }), layout);
+    const counts = new Map<string, number>();
+    for (const cell of cells) counts.set(familyAt(cell), (counts.get(familyAt(cell)) ?? 0) + 1);
+    const values = [...counts.values()];
+    expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(4);
+  });
+
+  it('random mix degrades gracefully for a one-family palette', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const allowed: MaterialId[] = ['green-light', 'green-medium', 'green-dark'];
+    const cells = generatePattern(base({ allowedMaterials: allowed, seed: 991 }), layout);
+    const allowedIdx = new Set(
+      MATERIALS.map((m, i) => (allowed.includes(m.id) ? i : -1)).filter((i) => i >= 0),
+    );
+    expect(cells.every((cell) => allowedIdx.has(cell.material))).toBe(true);
+    expect(new Set(cells.map((cell) => cell.material)).size).toBeGreaterThan(1);
   });
 });

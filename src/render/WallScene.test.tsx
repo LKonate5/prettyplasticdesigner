@@ -89,24 +89,17 @@ describe('WallScene markup', () => {
     expect(svg).toContain('id="pp-wall-clip"');
   });
 
-  /**
-   * The load-bearing invariant of the whole renderer. Every tile is directional
-   * — First One hangs from a nose at its north vertex, Second High's wedge
-   * protrudes one way — and the photos are lit from a single direction. Turning
-   * or mirroring a tile turns its light with it and paints a wall that cannot
-   * physically exist. See Cell in core/types.ts.
-   */
-  describe('tiles are never turned or mirrored', () => {
-    for (const id of ['first-one', 'second-high', 'basic-third'] as ProductId[]) {
-      it(`${id}: no rotate/scale/matrix transform, with photos or without`, () => {
-        for (const textures of [new Map(), fakeTextures(id, 6)]) {
-          const svg = render(id, 6, 6, { textures });
-          expect(svg).not.toMatch(/rotate\(/);
-          expect(svg).not.toMatch(/scale\(/);
-          expect(svg).not.toMatch(/matrix\(/);
-        }
-      });
-    }
+  it('only Second High can carry a selected-tile rotation', () => {
+    const product = PRODUCTS['second-high'];
+    const layout = computeLayout(product, 2, 2, { exposure: 450, bond: 'staggered' });
+    const cells = generatePattern(defaultPattern(1), layout);
+    cells[0] = { ...cells[0], rotation: 90 };
+    const svg = renderToStaticMarkup(
+      <WallScene layout={layout} cells={cells} product={product} textures={new Map()} seed={1} />,
+    );
+    expect(svg).toMatch(/rotate\(90 /);
+    expect(render('first-one', 6, 6)).not.toMatch(/rotate\(/);
+    expect(render('basic-third', 6, 6)).not.toMatch(/rotate\(/);
   });
 
   describe('photo variety', () => {

@@ -1,8 +1,8 @@
 /**
- * Deterministic pseudo-random numbers (mulberry32). Every cell gets its own
- * stream keyed on (seed, row, col), so:
- *  - the same seed always reproduces the same design (re-roll = new seed),
- *  - resizing the wall keeps the pattern of the cells that already existed.
+ * Deterministic pseudo-random numbers (mulberry32). Callers can key streams on
+ * (seed, row, col), so the same seed always reproduces the same design
+ * (re-roll = new seed). Some generators also score neighbouring cells, so they
+ * may intentionally rebalance when the wall size changes.
  */
 
 export function mulberry32(seed: number): () => number {

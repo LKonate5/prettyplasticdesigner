@@ -34,8 +34,9 @@ export async function exportPdf(
   doc.setFontSize(10);
   doc.text(`${product.name}   ·   ${dateLabel}`, margin, 16.5);
 
-  // Wall render (PNG rasterized at 2 px/mm, fitted into a box)
-  const png = await renderPng(scene);
+  // PDF only displays this image at A4 scale. A bounded JPEG avoids embedding
+  // a huge lossless full-wall bitmap while tables and text remain vector.
+  const jpeg = await renderPdfJpeg(scene);
   const boxY = 28;
   const boxMaxH = 96;
   const aspect = schedule.wallW / schedule.wallH;
@@ -46,7 +47,7 @@ export async function exportPdf(
     imgW = imgH * aspect;
   }
   const imgX = margin + (contentW - imgW) / 2;
-  doc.addImage(png, 'PNG', imgX, boxY, imgW, imgH);
+  doc.addImage(jpeg, 'JPEG', imgX, boxY, imgW, imgH);
   doc.setTextColor(110, 109, 104);
   doc.setFontSize(8.5);
   doc.text(
@@ -124,8 +125,8 @@ function specRows(product: ProductSpec, options: ProductOptions, s: Schedule): s
   return rows;
 }
 
-async function renderPng(scene: SceneInput): Promise<string> {
-  const { blob } = await renderRaster(scene, 'png', 2);
+export async function renderPdfJpeg(scene: SceneInput): Promise<string> {
+  const { blob } = await renderRaster(scene, 'jpeg', 1, { maxEdge: 2000, quality: 0.78 });
   return blobToDataUrl(blob);
 }
 

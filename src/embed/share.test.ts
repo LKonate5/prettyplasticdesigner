@@ -21,10 +21,14 @@ describe('share encode/decode', () => {
     expect(decoded!.cells).toEqual(design.cells);
   });
 
-  // Links minted before tile rotation was retired carry an `rr` flag and a
-  // third element on each override. They must still reopen — the rotation is
-  // simply dropped, since no tile is ever turned now.
-  it('still opens a link from before rotation was retired', () => {
+  it('round-trips Second High rotation overrides', () => {
+    const design = initialDesign('second-high', 123);
+    design.cells[4] = { ...design.cells[4], rotation: 270 };
+    const decoded = decodeDesign(encodeDesign(design));
+    expect(decoded?.cells[4]).toEqual(design.cells[4]);
+  });
+
+  it('opens a legacy link carrying Second High rotations', () => {
     const legacy = {
       p: 'second-high',
       r: 10,
@@ -39,7 +43,7 @@ describe('share encode/decode', () => {
       gd: 'vertical',
       sdir: 'horizontal',
       sw: 2,
-      rr: 1, // randomRotation — no longer a thing
+      rr: 1,
       w: 0.1,
       o: [[0, 5, 90], [3, 11, 270]], // [cellIndex, material, rotation]
     };
@@ -50,9 +54,8 @@ describe('share encode/decode', () => {
     const decoded = decodeDesign(encoded);
     expect(decoded).not.toBeNull();
     expect(decoded!.productId).toBe('second-high');
-    // the painted colours survive; the rotations are gone
-    expect(decoded!.cells[0]).toEqual({ material: 5 });
-    expect(decoded!.cells[3]).toEqual({ material: 11 });
+    expect(decoded!.cells[0]).toEqual({ material: 5, rotation: 90 });
+    expect(decoded!.cells[3]).toEqual({ material: 11, rotation: 270 });
   });
 
   it('carries product, size, options and pattern settings', () => {

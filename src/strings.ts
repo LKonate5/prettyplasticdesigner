@@ -8,13 +8,16 @@ export const STR = {
 
   product: 'Product',
   rows: 'Rows',
+  physicalRows: 'Rows (physical courses)',
   columns: 'Columns',
   wallSize: 'Wall size',
   widthM: 'Width (m)',
   heightM: 'Height (m)',
-  advancedGrid: 'Set by rows & columns instead',
+  advancedMetres: 'Set by width & height instead',
   renderedPreviewNote:
     'Note: this product is shown as a rendered preview — these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
+  basicThirdPreviewNote:
+    'Basic Third is currently shown as a rendered preview. Photography of the final Basic Third tiles will be integrated as soon as it is available.',
   borrowedPhotoNote:
     'Note: Basic Third does not yet have its own tile photos, so this preview borrows First One photography in matching colours and shades — both are made from the same recycled material. The real Basic Third tiles will show their own three-band relief pattern.',
   bond: 'Bond',
@@ -50,6 +53,11 @@ export const STR = {
   colourGrey: 'Grey',
   paletteHint:
     'Click a colour to paint with it. The dot in the corner includes or excludes it from the auto-generated mix.',
+  rotation: 'Tile rotation',
+  rotateTile: 'Rotate tile',
+  rotateRow: 'Rotate row',
+  rotateColumn: 'Rotate column',
+  resetRotations: 'Reset tile rotations',
   allowAll: 'Use all',
 
   tools: 'Tools',

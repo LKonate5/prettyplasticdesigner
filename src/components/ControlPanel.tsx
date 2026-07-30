@@ -99,9 +99,10 @@ export function ControlPanel({
         value={design.productId}
         onChange={(productId) => dispatch({ type: 'SET_PRODUCT', productId })}
       />
+      {product.id === 'basic-third' && <p className="note">{STR.basicThirdPreviewNote}</p>}
       {photoStatus === 'none' && <p className="note">{STR.renderedPreviewNote}</p>}
-      {/* Basic Third no longer shows the borrowed photo (see TileShape) — its
-          marble-fade + bands rendering doesn't need this disclaimer. */}
+      {/* Basic Third has its own rendered-preview note above; don't also show
+          the sibling-photo fallback disclaimer. */}
       {photoStatus === 'borrowed' && product.id !== 'basic-third' && (
         <p className="note">{STR.borrowedPhotoNote}</p>
       )}
@@ -132,6 +133,38 @@ export function ControlPanel({
           dispatch({ type: 'SET_PATTERN', pattern: { allowedMaterials: [...MATERIAL_IDS] } })
         }
       />
+
+      {product.id === 'second-high' && (
+        <div className="section">
+          <h2>{STR.rotation}</h2>
+          <div className="seg">
+            <button
+              className={state.ui.rotationTool === 'tile' ? 'active' : ''}
+              title={STR.rotateTile}
+              onClick={() => dispatch({ type: 'SET_ROTATION_TOOL', tool: state.ui.rotationTool === 'tile' ? null : 'tile' })}
+            >
+              {STR.rotateTile}
+            </button>
+            <button
+              className={state.ui.rotationTool === 'row' ? 'active' : ''}
+              title={STR.rotateRow}
+              onClick={() => dispatch({ type: 'SET_ROTATION_TOOL', tool: state.ui.rotationTool === 'row' ? null : 'row' })}
+            >
+              {STR.rotateRow}
+            </button>
+            <button
+              className={state.ui.rotationTool === 'column' ? 'active' : ''}
+              title={STR.rotateColumn}
+              onClick={() => dispatch({ type: 'SET_ROTATION_TOOL', tool: state.ui.rotationTool === 'column' ? null : 'column' })}
+            >
+              {STR.rotateColumn}
+            </button>
+          </div>
+          <button className="btn" onClick={() => dispatch({ type: 'RESET_ROTATIONS' })}>
+            {STR.resetRotations}
+          </button>
+        </div>
+      )}
 
       <ModeToggle
         canUndo={state.past.length > 0}

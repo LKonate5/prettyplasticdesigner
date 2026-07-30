@@ -79,6 +79,7 @@ export function WallScene({
         texBorrowed={resolved ? !resolved.native : false}
         toneJitter={toneJitterFor(seed, tile.patternRow, tile.patternCol)}
         productId={product.id}
+        rotation={product.id === 'second-high' ? cell?.rotation ?? 0 : 0}
       />
     );
   });

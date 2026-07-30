@@ -102,15 +102,47 @@ describe('app reducer + history', () => {
     s = run(s, { type: 'SET_GRID', rows: 80, cols: 80 });
     expect(s.present).toBe(before);
     expect(s.ui.capNotice).toBe(true);
-    s = run(s, { type: 'SET_GRID', rows: 10, cols: 10 });
+    s = run(s, { type: 'SET_GRID', rows: 12, cols: 10 });
     expect(s.ui.capNotice).toBe(false);
   });
 
-  // Tiles carry colour and nothing else — no rotation, on any product. See Cell
-  // in core/types.ts for why turning a photographed tile is not an option.
-  it('a cell holds colour only', () => {
+  it('Second High rotations support tile, row, column, reset and undo/redo', () => {
     let s = initialAppState(7);
     s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
-    expect(Object.keys(s.present.cells[0])).toEqual(['material']);
+    s = run(s, { type: 'ROTATE_CELL', cellIndex: 12 });
+    expect(s.present.cells[12].rotation).toBe(90);
+    s = run(s, { type: 'UNDO' }, { type: 'REDO' });
+    expect(s.present.cells[12].rotation).toBe(90);
+    s = run(s, { type: 'ROTATE_ROW', row: 1 });
+    expect(s.present.cells[10].rotation).toBe(90);
+    expect(s.present.cells[12].rotation).toBe(180);
+    s = run(s, { type: 'ROTATE_COLUMN', col: 2 });
+    expect(s.present.cells[2].rotation).toBe(90);
+    s = run(s, { type: 'RESET_ROTATIONS' });
+    expect(s.present.cells.every((cell) => !cell.rotation)).toBe(true);
+    s = run(s, { type: 'ROTATE_CELL', cellIndex: 0 }, { type: 'SET_PRODUCT', productId: 'first-one' });
+    expect(s.present.cells.every((cell) => !cell.rotation)).toBe(true);
+  });
+
+  it('Second High rotation tools are product-scoped UI state', () => {
+    let s = initialAppState(7);
+    s = run(s, { type: 'SET_ROTATION_TOOL', tool: 'tile' });
+    expect(s.ui.rotationTool).toBeNull();
+
+    s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
+    s = run(s, { type: 'SET_ROTATION_TOOL', tool: 'row' });
+    expect(s.ui.rotationTool).toBe('row');
+
+    s = run(s, { type: 'SET_ROTATION_TOOL', tool: null });
+    expect(s.ui.rotationTool).toBeNull();
+
+    s = run(s, { type: 'SET_ROTATION_TOOL', tool: 'column' });
+    s = run(s, { type: 'SET_PRODUCT', productId: 'basic-third' });
+    expect(s.ui.rotationTool).toBeNull();
+  });
+
+  it('ignores rotation actions outside Second High', () => {
+    const s = initialAppState(7);
+    expect(run(s, { type: 'ROTATE_CELL', cellIndex: 0 })).toBe(s);
   });
 });

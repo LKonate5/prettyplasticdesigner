@@ -57,10 +57,13 @@ export async function renderRaster(
   scene: SceneInput,
   format: 'png' | 'jpeg',
   pxPerMm: number,
-  opts: { legend?: Schedule } = {},
+  opts: { legend?: Schedule; maxEdge?: number; quality?: number } = {},
 ): Promise<RasterResult> {
   const { wallW, wallH } = scene.layout;
-  const { pxW, pxH, clamped } = clampScale(wallW, wallH, pxPerMm);
+  const requestedScale = opts.maxEdge
+    ? Math.min(pxPerMm, opts.maxEdge / Math.max(wallW, wallH))
+    : pxPerMm;
+  const { pxW, pxH, clamped } = clampScale(wallW, wallH, requestedScale);
   const svg = await buildSceneSvg(scene, { mm: false });
   const canvas = await svgToCanvas(svg, pxW, pxH);
   const out = format === 'jpeg' ? withWhiteGround(canvas) : canvas;
@@ -71,7 +74,7 @@ export async function renderRaster(
   const blob = await canvasToBlob(
     out,
     format === 'jpeg' ? 'image/jpeg' : 'image/png',
-    format === 'jpeg' ? 0.92 : undefined,
+    format === 'jpeg' ? opts.quality ?? 0.92 : undefined,
   );
   return { blob, width: pxW, height: pxH, clamped };
 }

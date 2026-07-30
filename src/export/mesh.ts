@@ -1,34 +1,24 @@
+import { SH_FACET } from '../core/layout/secondHigh';
 import type { Cell, Layout, Material, Pt, ProductSpec } from '../core/types';
 import { materialAt } from '../data/palette';
 
 /**
- * 3D wall mesh — the shared geometry behind the OBJ and GLB exporters.
- *
- * Each visible tile becomes a solid prism: its footprint extruded from the
- * wall plane (z = 0) out to the product depth (z = depth, toward the viewer).
- * Prisms are grouped by material so each colour is one mesh part.
- *
- * Coordinates are millimetres in a Y-up, right-handed frame (the glTF/OBJ
- * convention): X = wall width, Y = wall height (flipped from the screen's
- * y-down), Z = depth toward the viewer.
- *
- * A small shrink toward each tile's centre opens a thin joint between tiles.
- * That both looks like real cladding and, crucially, stops touching tiles
- * (e.g. the exact First One tessellation) from sharing coincident side walls,
- * which would z-fight between differently-coloured neighbours.
- *
- * Faceted relief (Second High's facets, Basic Third's bands) is surface detail
- * shown in the 2D render/texture, not modelled in the mesh — the mesh carries
- * the true footprint, thickness and layout, which is what CAD/3D tools need.
+ * 3D wall mesh shared by the OBJ and GLB exporters. Coordinates are
+ * millimetres in a Y-up, right-handed frame: X = wall width, Y = wall height,
+ * Z = depth toward the viewer. Product relief is real geometry, not a texture:
+ * Second High has a raised faceted apex and Basic Third gets three raised slats.
  */
 
-const JOINT_SHRINK = 0.985; // 1.5% toward centroid → visible joint, no coincident faces
+const JOINT_SHRINK = 0.985;
+const SECOND_HIGH_RELIEF = 12;
+const BASIC_THIRD_RELIEF = 3;
+const FIRST_ONE_LAYER_OFFSET = 2;
 
 type V3 = [number, number, number];
 
 export interface MeshGroup {
   material: Material;
-  positions: number[]; // flat xyz, 9 numbers per triangle (non-indexed, flat-shaded)
+  positions: number[];
   normals: number[];
 }
 
@@ -38,12 +28,7 @@ export interface WallMesh {
   bbox: { min: V3; max: V3 };
 }
 
-export function buildWallMesh(
-  product: ProductSpec,
-  layout: Layout,
-  cells: readonly Cell[],
-): WallMesh {
-  const depth = product.tile.d;
+export function buildWallMesh(product: ProductSpec, layout: Layout, cells: readonly Cell[]): WallMesh {
   const groups = new Map<number, MeshGroup>();
   const min: V3 = [Infinity, Infinity, Infinity];
   const max: V3 = [-Infinity, -Infinity, -Infinity];
@@ -51,8 +36,8 @@ export function buildWallMesh(
 
   const grow = (p: V3) => {
     for (let i = 0; i < 3; i++) {
-      if (p[i] < min[i]) min[i] = p[i];
-      if (p[i] > max[i]) max[i] = p[i];
+      min[i] = Math.min(min[i], p[i]);
+      max[i] = Math.max(max[i], p[i]);
     }
   };
 
@@ -66,22 +51,27 @@ export function buildWallMesh(
       groups.set(matIndex, group);
     }
 
-    // to 3D (y-up), shrunk toward the centroid to open a joint
-    const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
-    const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+    const cx = poly.reduce((sum, p) => sum + p[0], 0) / poly.length;
+    const cy = poly.reduce((sum, p) => sum + p[1], 0) / poly.length;
+    const layerOffset = product.id === 'first-one' ? (tile.row % 2) * FIRST_ONE_LAYER_OFFSET : 0;
+    const outerDepth = product.tile.d + layerOffset;
+    const frontDepth = product.id === 'second-high'
+      ? outerDepth - SECOND_HIGH_RELIEF
+      : product.id === 'basic-third'
+        ? outerDepth - BASIC_THIRD_RELIEF
+        : outerDepth;
     const to3d = (p: Pt, z: number): V3 => [
       cx + (p[0] - cx) * JOINT_SHRINK,
       layout.wallH - (cy + (p[1] - cy) * JOINT_SHRINK),
       z,
     ];
-    const front = poly.map((p) => to3d(p, depth));
-    const back = poly.map((p) => to3d(p, 0));
+    const front = poly.map((p) => to3d(p, frontDepth));
+    const back = poly.map((p) => to3d(p, layerOffset));
     const center: V3 = [
-      front.reduce((s, p) => s + p[0], 0) / front.length,
-      front.reduce((s, p) => s + p[1], 0) / front.length,
-      depth / 2,
+      front.reduce((sum, p) => sum + p[0], 0) / front.length,
+      front.reduce((sum, p) => sum + p[1], 0) / front.length,
+      (frontDepth + layerOffset) / 2,
     ];
-
     const push = (a: V3, b: V3, c: V3) => {
       triangleCount += emitTri(group!, a, b, c, center);
       grow(a);
@@ -89,28 +79,60 @@ export function buildWallMesh(
       grow(c);
     };
 
-    const n = poly.length;
-    // front cap (z = depth) and back cap (z = 0), fan-triangulated (convex)
-    for (let i = 1; i < n - 1; i++) {
-      push(front[0], front[i], front[i + 1]);
-      push(back[0], back[i], back[i + 1]);
+    if (product.id === 'second-high') {
+      const [x, y] = tile.polygon[0];
+      const rotation = cells[tile.cellIndex]?.rotation ?? 0;
+      const apex = to3d(rotatePoint([x + SH_FACET.ax, y + SH_FACET.ay], x, y, rotation), outerDepth);
+      for (let i = 0; i < front.length; i++) push(front[i], front[(i + 1) % front.length], apex);
+    } else {
+      for (let i = 1; i < front.length - 1; i++) push(front[0], front[i], front[i + 1]);
     }
-    // side walls
-    for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n;
+
+    // Back cap and outside walls form the actual tile thickness.
+    for (let i = 1; i < back.length - 1; i++) push(back[0], back[i], back[i + 1]);
+    for (let i = 0; i < poly.length; i++) {
+      const j = (i + 1) % poly.length;
       push(front[i], front[j], back[j]);
       push(front[i], back[j], back[i]);
     }
+
+    if (product.id === 'basic-third') {
+      const x0 = Math.min(...poly.map(([x]) => x));
+      const x1 = Math.max(...poly.map(([x]) => x));
+      const y0 = Math.min(...poly.map(([, y]) => y));
+      const y1 = Math.max(...poly.map(([, y]) => y));
+      const width = x1 - x0;
+      const bandHalf = Math.min(8, width / 12);
+      for (let band = 0; band < 3; band++) {
+        const bx = x0 + ((band + 0.5) * width) / 3;
+        const low: Pt[] = [[bx - bandHalf, y0], [bx + bandHalf, y0], [bx + bandHalf, y1], [bx - bandHalf, y1]];
+        const base = low.map((p) => to3d(p, frontDepth));
+        const top = low.map((p) => to3d(p, outerDepth));
+        push(top[0], top[1], top[2]);
+        push(top[0], top[2], top[3]);
+        for (let i = 0; i < 4; i++) {
+          const j = (i + 1) % 4;
+          push(top[i], top[j], base[j]);
+          push(top[i], base[j], base[i]);
+        }
+      }
+    }
   }
 
-  return {
-    groups: [...groups.values()],
-    triangleCount,
-    bbox: { min, max },
-  };
+  return { groups: [...groups.values()], triangleCount, bbox: { min, max } };
 }
 
-/** Emit one triangle with a flat normal oriented outward from `center`. */
+function rotatePoint(point: Pt, x: number, y: number, rotation: number): Pt {
+  if (!rotation) return point;
+  const cx = x + SH_FACET.size / 2;
+  const cy = y + SH_FACET.size / 2;
+  const rad = (rotation * Math.PI) / 180;
+  return [
+    cx + (point[0] - cx) * Math.cos(rad) - (point[1] - cy) * Math.sin(rad),
+    cy + (point[0] - cx) * Math.sin(rad) + (point[1] - cy) * Math.cos(rad),
+  ];
+}
+
 function emitTri(group: MeshGroup, a: V3, b: V3, c: V3, center: V3): 1 {
   let n = normal(a, b, c);
   const mid: V3 = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3];

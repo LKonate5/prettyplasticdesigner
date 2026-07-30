@@ -72,6 +72,15 @@ describe('DXF writer (AC1015)', () => {
     expect(polys).toBe(layout.cellCount * 2 + 1); // tile + facet each, + boundary
   });
 
+  it('rotates Second High facet lines with the selected tile', () => {
+    const { product, layout, cells } = dxfFor('second-high', 2, 2);
+    const unrotated = buildDxf(product, layout, cells);
+    cells[0] = { ...cells[0], rotation: 90 };
+    const rotated = buildDxf(product, layout, cells);
+    expect(rotated).not.toEqual(unrotated);
+    expect(rotated).toContain('PP_FACETS');
+  });
+
   it('every entity/record carries a unique handle', () => {
     const { dxf } = dxfFor('first-one');
     const p = pairs(dxf);

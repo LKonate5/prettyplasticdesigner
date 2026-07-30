@@ -15,6 +15,7 @@ interface WallPreviewProps {
   /** Design seed — picks which photo variant each tile gets. */
   seed: number;
   brush: MaterialId;
+  rotationTool: 'tile' | 'row' | 'column' | null;
   dispatch: Dispatch<Action>;
 }
 
@@ -45,6 +46,7 @@ export function WallPreview({
   textures,
   seed,
   brush,
+  rotationTool,
   dispatch,
 }: WallPreviewProps) {
   const { wallW, wallH } = layout;
@@ -86,6 +88,13 @@ export function WallPreview({
     const el = target?.closest?.('[data-cell]');
     if (!el) return;
     const cellIndex = Number(el.getAttribute('data-cell'));
+    dispatch({ type: 'SELECT_CELL', cellIndex });
+    if (rotationTool) {
+      if (rotationTool === 'tile') dispatch({ type: 'ROTATE_CELL', cellIndex });
+      if (rotationTool === 'row') dispatch({ type: 'ROTATE_ROW', row: Number(el.getAttribute('data-row')) });
+      if (rotationTool === 'column') dispatch({ type: 'ROTATE_COLUMN', col: Number(el.getAttribute('data-col')) });
+      return;
+    }
     const key = `cell:${cellIndex}`;
     if (key === gesture.current.lastKey) return;
     gesture.current.lastKey = key;
@@ -197,6 +206,10 @@ export function WallPreview({
     }
     if (e.button !== 0) return;
     if (!(e.target as Element).closest?.('[data-cell]')) return;
+    if (rotationTool) {
+      applyAt(e.target as Element);
+      return;
+    }
     startPaint(e);
   };
 

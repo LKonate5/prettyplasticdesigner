@@ -7,26 +7,16 @@ import { randomSeed } from './core/pattern/prng';
 import { appReducer, appStateFromDesign, initialAppState } from './core/state/reducer';
 import { PRODUCTS } from './data/products';
 import { designFromHash } from './embed/share';
-import { loadTextures } from './render/textures';
 import type { TextureMap } from './render/textures';
 import { STR } from './strings';
 
-export function App() {
+export function App({ initialTextures }: { initialTextures: TextureMap }) {
   const [state, dispatch] = useReducer(appReducer, undefined, () => {
     const shared = designFromHash(); // reopen a design shared via URL
     return shared ? appStateFromDesign(shared) : initialAppState(randomSeed());
   });
-  const [textures, setTextures] = useState<TextureMap>(new Map());
+  const [textures] = useState<TextureMap>(initialTextures);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Load the real tile-photo manifest once at startup (falls back to hex).
-  useEffect(() => {
-    let live = true;
-    loadTextures().then((map) => live && setTextures(map));
-    return () => {
-      live = false;
-    };
-  }, []);
 
   const design = state.present;
   const product = PRODUCTS[design.productId];
@@ -80,6 +70,7 @@ export function App() {
         textures={textures}
         seed={design.pattern.seed}
         brush={state.ui.brush}
+        rotationTool={state.ui.rotationTool}
         dispatch={dispatch}
       />
     </div>
