@@ -159,14 +159,14 @@ under Pretty Plastic's name). So:
 
 - `api/send-email.ts` — a **Vercel serverless function**. It reads
   `RESEND_API_KEY` from the server's environment and is the only code that ever
-  touches it. The browser calls `POST /api/send-email` with just the message
-  text (and an optional attachment); the function fills in the real `from`/`to`
-  and calls Resend.
+  touches it. The browser calls `POST /api/send-email` with the message text;
+  the function fills in the real `from`/`to` and calls Resend.
 - The recipient (`SALES_EMAIL`) is **hard-coded server-side**, not sent by the
   browser — so the endpoint can't be turned into an open relay to some other
   address.
-- **"Request a sample"**, **"Request a quote"** (which also attaches a preview
-  image of the wall) and **Export → "Email to Pretty Plastic"** all use this.
+- **"Request a sample"**, **"Request a quote"** and **Export → "Email to Pretty
+  Plastic"** all use this. Quote and sample requests contain a compact link
+  that reopens the exact design instead of attaching a large preview image.
   If the send fails for any reason (missing key, offline, Resend error), each
   one falls back to opening the visitor's own email app with the same message
   pre-filled, so nothing is ever a dead end.
@@ -178,12 +178,11 @@ under Pretty Plastic's name). So:
    `.env` is gitignored — never commit a real key.
 3. **Production (Vercel):** add `RESEND_API_KEY` in the project's
    **Settings → Environment Variables** — not in a file at all.
-4. The sender address is Resend's shared testing address
-   (`onboarding@resend.dev`), which works with no setup. For real production
-   use, [verify a domain in Resend](https://resend.com/docs/dashboard/domains/introduction)
-   (e.g. `prettyplastic.nl`) and change `FROM_EMAIL` in
-   `api/_lib/sendEmail.ts` to a real address on it — this improves
-   deliverability and stops the email looking like it came from a stranger.
+4. The sender defaults to `Pretty Plastic Designer
+   <designer@prettyplastic.nl>`. The `prettyplastic.nl` domain must remain
+   [verified in Resend](https://resend.com/docs/dashboard/domains/introduction).
+   Keep the sender different from the `info@prettyplastic.nl` recipient to
+   avoid self-spoofing filters.
 
 Because this needs a server-side function, the static build alone (the
 `dist/` folder) can't send email on its own — it has to be **hosted on

@@ -10,7 +10,7 @@ import { Resend } from 'resend';
  * Pretty Plastic's Resend account.
  */
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Pretty Plastic Designer <info@prettyplastic.nl>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Pretty Plastic Designer <designer@prettyplastic.nl>';
 const SALES_EMAIL = process.env.SALES_EMAIL || 'info@prettyplastic.nl';
 
 const MAX_SUBJECT = 200;
