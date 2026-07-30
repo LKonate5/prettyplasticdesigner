@@ -143,7 +143,7 @@ export async function submitEmail(
   attachment?: { filename: string; contentBase64: string },
 ): Promise<SubmitEmailResult> {
   try {
-    const res = await fetch('/api/send-email', {
+    const res = await fetch(emailEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject, text, attachment }),
@@ -156,6 +156,15 @@ export async function submitEmail(
   } catch {
     return { ok: false, error: 'Could not reach the email service — check your connection.' };
   }
+}
+
+function emailEndpoint(): string {
+  const configured = import.meta.env.VITE_EMAIL_API_URL;
+  if (configured) return configured;
+  const { hostname } = window.location;
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+    ? 'https://prettyplasticdesigner.vercel.app/api/send-email'
+    : '/api/send-email';
 }
 
 /** Strip the "data:...;base64," prefix a FileReader data URL carries. */
