@@ -16,7 +16,7 @@ const SALES_EMAIL = process.env.SALES_EMAIL || 'info@prettyplastic.nl';
 const MAX_SUBJECT = 200;
 const MAX_TEXT = 20_000;
 const MAX_ATTACHMENT_FILENAME = 100;
-const MAX_ATTACHMENT_BASE64 = 6_000_000; // ~4.5 MB decoded — a wall preview image, not the full-res download
+const MAX_ATTACHMENT_BASE64 = 2_500_000; // keep JSON requests below serverless body limits
 
 export interface SendEmailInput {
   subject: string;

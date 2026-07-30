@@ -11,7 +11,10 @@ import { STR } from '../strings';
 type Status = { kind: 'idle' } | { kind: 'busy' } | { kind: 'sent' } | { kind: 'error'; message: string };
 type Preview = { kind: 'sample' | 'quote'; subject: string; body: string };
 
-const ATTACHMENT_PX_PER_MM = 0.6; // modest size: readable, but a light email attachment
+const QUOTE_ATTACHMENT_PX_PER_MM = 0.45;
+const QUOTE_ATTACHMENT_MAX_EDGE = 1600;
+const QUOTE_ATTACHMENT_JPEG_QUALITY = 0.76;
+const QUOTE_ATTACHMENT_MAX_BASE64 = 2_500_000; // keep the full JSON request comfortably below Vercel's body limit
 
 /**
  * "Request a sample" and "Request a quote" — both actually SEND an email to
@@ -106,10 +109,20 @@ export function RequestButtons({
     setQuoteStatus({ kind: 'busy' });
     try {
       const { renderRaster } = await import('../export/raster');
-      const { blob } = await renderRaster(scene, 'png', ATTACHMENT_PX_PER_MM, { legend: schedule });
+      const { blob } = await renderRaster(scene, 'jpeg', QUOTE_ATTACHMENT_PX_PER_MM, {
+        legend: schedule,
+        maxEdge: QUOTE_ATTACHMENT_MAX_EDGE,
+        quality: QUOTE_ATTACHMENT_JPEG_QUALITY,
+      });
       const contentBase64 = await blobToBase64(blob);
-      const filename = `pretty-plastic_${product.id}_wall.png`;
-      const result = await submitEmail(subject, body, { filename, contentBase64 });
+      const attachment =
+        contentBase64.length <= QUOTE_ATTACHMENT_MAX_BASE64
+          ? { filename: `pretty-plastic_${product.id}_wall.jpg`, contentBase64 }
+          : undefined;
+      const message = attachment
+        ? body
+        : `${body}\n\nPreview image omitted because the generated wall image was too large for email. The design link above remains available.`;
+      const result = await submitEmail(subject, message, attachment);
       if (result.ok) {
         setQuoteStatus({ kind: 'sent' });
         return;
