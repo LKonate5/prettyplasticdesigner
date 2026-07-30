@@ -6,7 +6,7 @@ import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
 import { MATERIAL_IDS } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
-import type { ExportLead } from '../embed/email';
+import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { productPhotoStatus } from '../render/textures';
 import type { TextureMap } from '../render/textures';
 import { STR } from '../strings';
@@ -63,15 +63,20 @@ export function ControlPanel({
   const [lead, setLead] = useState<ExportLead | null>(null);
   const [pendingLead, setPendingLead] = useState<{
     label: string;
+    request: LeadRequestContext;
     onReady: (lead: ExportLead) => void;
   } | null>(null);
 
-  const requireLead = (label: string, onReady: (lead: ExportLead) => void) => {
-    if (lead) {
+  const requireLead = (
+    label: string,
+    onReady: (lead: ExportLead) => void,
+    request: LeadRequestContext = { mode: 'generic' },
+  ) => {
+    if (lead && request.mode === 'generic') {
       onReady(lead);
       return;
     }
-    setPendingLead({ label, onReady });
+    setPendingLead({ label, request, onReady });
   };
 
   const toggleAllowed = (id: MaterialId) => {
@@ -201,8 +206,10 @@ export function ControlPanel({
       {pendingLead && (
         <LeadCaptureModal
           formatLabel={pendingLead.label}
-          onSubmit={(next) => {
-            setLead(next);
+          request={pendingLead.request}
+          initialLead={lead}
+          onSubmit={(next, cacheLead) => {
+            setLead(cacheLead);
             const onReady = pendingLead.onReady;
             setPendingLead(null);
             onReady(next);

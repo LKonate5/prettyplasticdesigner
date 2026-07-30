@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { ProductSpec } from '../core/types';
-import type { ExportLead } from '../embed/email';
+import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { blobToBase64, openMail, quoteEmail, sampleEmail, submitEmail, withLead } from '../embed/email';
 import type { SceneInput } from '../export/svg';
 import { EmailPreviewModal } from './EmailPreviewModal';
@@ -39,24 +39,52 @@ export function RequestButtons({
   order: Order;
   scene: SceneInput;
   /** Shared with ExportMenu — asks once per visit (see ControlPanel). */
-  requireLead: (label: string, onReady: (lead: ExportLead) => void) => void;
+  requireLead: (
+    label: string,
+    onReady: (lead: ExportLead) => void,
+    request?: LeadRequestContext,
+  ) => void;
 }) {
   const [sampleStatus, setSampleStatus] = useState<Status>({ kind: 'idle' });
   const [quoteStatus, setQuoteStatus] = useState<Status>({ kind: 'idle' });
   const [preview, setPreview] = useState<Preview | null>(null);
+  const defaultSampleMaterials = [...schedule.rows]
+    .sort((a, b) => b.count - a.count)
+    .map((row) => row.material.id)
+    .slice(0, 3);
 
   const openSamplePreview = () => {
-    requireLead(STR.requestSample, (lead) => {
-      const { subject, body } = sampleEmail(product, schedule, design);
-      setPreview({ kind: 'sample', subject, body: withLead(lead, body) });
-    });
+    requireLead(
+      STR.requestSample,
+      (lead) => {
+        const { subject, body } = sampleEmail(product, schedule, design, lead.sample);
+        setPreview({ kind: 'sample', subject, body: withLead(lead, body) });
+      },
+      {
+        mode: 'sample',
+        sampleDefaults: {
+          street: '',
+          postalCode: '',
+          city: '',
+          country: STR.defaultCountry,
+          selections: [{ productId: product.id, materialIds: defaultSampleMaterials }],
+        },
+      },
+    );
   };
 
   const openQuotePreview = () => {
-    requireLead(STR.requestQuote, (lead) => {
-      const { subject, body } = quoteEmail(product, schedule, design, order);
-      setPreview({ kind: 'quote', subject, body: withLead(lead, body) });
-    });
+    requireLead(
+      STR.requestQuote,
+      (lead) => {
+        const { subject, body } = quoteEmail(product, schedule, design, order, lead.quote);
+        setPreview({ kind: 'quote', subject, body: withLead(lead, body) });
+      },
+      {
+        mode: 'quote',
+        quoteDefaults: { requestedAreaM2: order.toOrderM2, productIds: [product.id] },
+      },
+    );
   };
 
   const sendSample = async (subject: string, body: string) => {

@@ -4,7 +4,7 @@ import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { TextureMap } from '../render/textures';
 import { baseName, downloadText } from '../export/download';
-import type { ExportLead } from '../embed/email';
+import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { exportNotificationEmail, openMail, quoteEmail, submitEmail, withLead } from '../embed/email';
 import { STR } from '../strings';
 
@@ -47,7 +47,11 @@ export function ExportMenu({
 }: {
   ctx: ExportContext;
   /** Shared with RequestButtons — asks once per visit (see ControlPanel). */
-  requireLead: (label: string, onReady: (lead: ExportLead) => void) => void;
+  requireLead: (
+    label: string,
+    onReady: (lead: ExportLead) => void,
+    request?: LeadRequestContext,
+  ) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);

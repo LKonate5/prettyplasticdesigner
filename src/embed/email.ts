@@ -1,7 +1,9 @@
 import { SALES_EMAIL } from '../config';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
-import type { ProductSpec } from '../core/types';
+import type { MaterialId, ProductId, ProductSpec } from '../core/types';
+import { MATERIALS } from '../data/palette';
+import { PRODUCTS } from '../data/products';
 import { shareUrl } from './share';
 
 const m = (mm: number) => (mm / 1000).toFixed(2);
@@ -12,14 +14,61 @@ export interface ExportLead {
   lastName: string;
   email: string;
   company: string;
+  projectName?: string;
+  projectPhase?: string;
+  quote?: QuoteRequestDetails;
+  sample?: SampleRequestDetails;
 }
 
-const leadLine = (lead: ExportLead): string =>
-  `From: ${lead.firstName} ${lead.lastName} — ${lead.email} — ${lead.company}`;
+export interface QuoteRequestDetails {
+  requestedAreaM2: number;
+  productIds: ProductId[];
+}
+
+export interface SampleRequestDetails {
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  selections: SampleProductSelection[];
+}
+
+export interface SampleProductSelection {
+  productId: ProductId;
+  materialIds: MaterialId[];
+}
+
+export interface LeadRequestContext {
+  mode: 'generic' | 'quote' | 'sample';
+  quoteDefaults?: QuoteRequestDetails;
+  sampleDefaults?: SampleRequestDetails;
+}
+
+function leadLines(lead: ExportLead): string[] {
+  return [
+    `From: ${lead.firstName} ${lead.lastName} — ${lead.email} — ${lead.company}`,
+    lead.projectName ? `Project name: ${lead.projectName}` : '',
+    lead.projectPhase ? `Project phase: ${lead.projectPhase}` : '',
+  ].filter((line) => line !== '');
+}
+
+const productNames = (ids: ProductId[]): string =>
+  ids.map((id) => PRODUCTS[id]?.name ?? id).join(', ');
+
+const materialNames = (ids: MaterialId[]): string =>
+  ids
+    .map((id) => MATERIALS.find((material) => material.id === id)?.name ?? id)
+    .join(', ');
+
+const sampleSelectionLines = (sample: SampleRequestDetails): string[] =>
+  sample.selections.map(
+    (selection) =>
+      `  • ${PRODUCTS[selection.productId]?.name ?? selection.productId}: ${materialNames(selection.materialIds)}`,
+  );
 
 /** Prefixes an outgoing email body with who the visitor is. */
 export function withLead(lead: ExportLead, body: string): string {
-  return `${leadLine(lead)}\n\n${body}`;
+  return `${leadLines(lead).join('\n')}\n\n${body}`;
 }
 
 /** Internal notification sent when a visitor downloads a file (not the quote/sample flows). */
@@ -33,7 +82,7 @@ export function exportNotificationEmail(
   const body = [
     `${lead.firstName} ${lead.lastName} just downloaded a ${formatLabel} of their facade design.`,
     '',
-    leadLine(lead),
+    ...leadLines(lead),
     '',
     ...projectLines(product, schedule, design),
     '',
@@ -114,12 +163,30 @@ export function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-export function sampleEmail(product: ProductSpec, schedule: Schedule, design: DesignState) {
+export function sampleEmail(
+  product: ProductSpec,
+  schedule: Schedule,
+  design: DesignState,
+  sample?: SampleRequestDetails,
+) {
   const body = [
     'Hi Pretty Plastic,',
     '',
     'I would like to request samples for the following facade design:',
     '',
+    ...(sample
+      ? [
+          'Sample request details:',
+          'Products and colours / shades:',
+          ...sampleSelectionLines(sample),
+          '',
+          'Delivery address:',
+          `${sample.street}`,
+          `${sample.postalCode} ${sample.city}`,
+          `${sample.country}`,
+          '',
+        ]
+      : []),
     ...projectLines(product, schedule, design),
     '',
     `Design link: ${shareUrl(design)}`,
@@ -129,12 +196,26 @@ export function sampleEmail(product: ProductSpec, schedule: Schedule, design: De
   return { subject: `Sample request — Pretty Plastic ${product.name}`, body };
 }
 
-export function quoteEmail(product: ProductSpec, schedule: Schedule, design: DesignState, order: Order) {
+export function quoteEmail(
+  product: ProductSpec,
+  schedule: Schedule,
+  design: DesignState,
+  order: Order,
+  quote?: QuoteRequestDetails,
+) {
   const body = [
     'Hi Pretty Plastic,',
     '',
     'Please could you quote the following facade design (pricing + availability)?',
     '',
+    ...(quote
+      ? [
+          'Quote request details:',
+          `Requested area: ${quote.requestedAreaM2} m²`,
+          `Products: ${productNames(quote.productIds)}`,
+          '',
+        ]
+      : []),
     ...projectLines(product, schedule, design),
     '',
     `To order (incl. ${Math.round(order.wastePct * 100)}% waste): ${order.toOrderM2} m²`,

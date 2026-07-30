@@ -439,11 +439,22 @@ table.schedule {
   padding: 20px;
   width: 100%;
   max-width: 340px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .modal-card h3 {
   margin: 0 0 4px;
+}
+
+.modal-card h4 {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pp-muted);
 }
 
 .modal-card .note {
@@ -453,6 +464,16 @@ table.schedule {
 
 .modal-card-wide {
   max-width: 480px;
+}
+
+.choice-list,
+.choice-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.choice-grid {
+  grid-template-columns: 1fr 1fr;
 }
 
 .modal-card textarea {
