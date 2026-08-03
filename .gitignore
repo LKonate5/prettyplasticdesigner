@@ -8,6 +8,9 @@ samples/
 # raw full-res tile photos (originals stay local; the app ships the
 # downscaled copies in public/textures/ via scripts/import-textures.sh)
 images/
+# recorded walkthroughs live in videos/ (scripts/record-demo.mjs) — left
+# untracked rather than ignored, so they show up in the file tree
+videos/raw/
 *.log
 .DS_Store
 *.local
