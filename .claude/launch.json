@@ -6,6 +6,78 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "modou-discover",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-discover-morning-briefing/frontend", "run", "dev"],
+      "port": 3016
+    },
+    {
+      "name": "modou-onboarding-a",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-onboarding-v3-a-company/frontend", "run", "dev"],
+      "port": 3024
+    },
+    {
+      "name": "modou-onboarding-b",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-onboarding-v3-b-goals/frontend", "run", "dev"],
+      "port": 3025
+    },
+    {
+      "name": "modou-onboarding-c",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-onboarding-v3-c-powerup/frontend", "run", "dev"],
+      "port": 3026
+    },
+    {
+      "name": "modou-onboarding-d",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-onboarding-v3-d-finish/frontend", "run", "dev"],
+      "port": 3030
+    },
+    {
+      "name": "modou-credits-pr6",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-credits-pr5-webhook-dual-shape/frontend", "run", "dev"],
+      "port": 3097
+    },
+    {
+      "name": "modou-credits-pr8",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-credits-pr8-ui-collapse/frontend", "run", "dev"],
+      "port": 3098
+    },
+    {
+      "name": "modou-credits-pr9",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-credits-pr9-trial-unification/frontend", "run", "dev"],
+      "port": 3099
+    },
+    {
+      "name": "modou-integrations",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-integrations-page-tools/frontend", "run", "dev"],
+      "port": 3031
+    },
+    {
+      "name": "modou-brain-pr1",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-brain-pr1-facts-spine/frontend", "run", "dev"],
+      "port": 3032
+    },
+    {
+      "name": "modou-brain-pr2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-brain-pr2-arbitration/frontend", "run", "dev"],
+      "port": 3033
+    },
+    {
+      "name": "modou-brain-pr3",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/levakonate/Documents/Code/modou-wt/feature-brain-pr3-corrections/frontend", "run", "dev"],
+      "port": 3034
     }
   ]
 }
