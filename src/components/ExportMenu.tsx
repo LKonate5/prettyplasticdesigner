@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Cell, Layout, PatternConfig, ProductOptions, ProductSpec } from '../core/types';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { TextureMap } from '../render/textures';
 import { baseName, downloadText } from '../export/download';
+import { formatMb, loadCadManifest, type CadManifest } from '../export/cad';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { exportNotificationEmail, openMail, quoteEmail, submitEmail, withLead } from '../embed/email';
 import { STR } from '../strings';
@@ -20,7 +21,7 @@ export interface ExportContext {
   order: Order;
 }
 
-type Format = 'email' | 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj';
+type Format = 'email' | 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj' | 'cad';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'email', label: 'Email to Pretty Plastic', note: 'Opens a pre-filled quote email with the design + link' },
@@ -33,6 +34,10 @@ const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours — SketchUp · Blender · 3D viewers' },
   { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL — universal 3D interchange' },
 ];
+
+// The only export that isn't generated from the design: Pretty Plastic's own
+// drawings of the TILE. Appended last, and only for products that have a pack.
+const CAD_LABEL = 'Tile CAD pack (Pretty Plastic)';
 
 // Image exports are for sharing/review; PDF/SVG/CAD keep the real-mm design data.
 const RASTER_PX_PER_MM = 1;
@@ -58,6 +63,29 @@ export function ExportMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [cad, setCad] = useState<CadManifest>(new Map());
+
+  // Tiny (a few hundred bytes) and static — fetched once so the menu knows which
+  // products have a CAD pack and how big it is before the user commits to it.
+  useEffect(() => {
+    let live = true;
+    loadCadManifest().then((m) => live && setCad(m));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const cadPack = cad.get(ctx.product.id);
+  const formats: Array<{ id: Format; label: string; note: string }> = cadPack
+    ? [
+        ...FORMATS,
+        {
+          id: 'cad',
+          label: CAD_LABEL,
+          note: `${cadPack.files} real drawings — DWG details, dimensions, SKP/STL/IFC (${formatMb(cadPack.bytes)})`,
+        },
+      ]
+    : FORMATS;
 
   const scene = {
     product: ctx.product,
@@ -70,7 +98,7 @@ export function ExportMenu({
   const name = baseName(ctx.product.id, ctx.layout.rows, ctx.layout.cols);
 
   function run(format: Format) {
-    const label = FORMATS.find((f) => f.id === format)?.label ?? format;
+    const label = formats.find((f) => f.id === format)?.label ?? format;
     requireLead(label, (lead) => void runExport(format, lead));
   }
 
@@ -157,12 +185,18 @@ export function ExportMenu({
           downloadBlob(zip, `${name}_obj.zip`);
           break;
         }
+        case 'cad': {
+          // Not generated from the design — Pretty Plastic's own tile drawings.
+          const { downloadCadPack } = await import('../export/cad');
+          await downloadCadPack(ctx.product.id, `pretty-plastic-${ctx.product.id}-cad.zip`);
+          break;
+        }
       }
       // The email case already tells Pretty Plastic who's asking; every other
       // format is a silent download, so let them know it happened. Best-effort
       // — a visitor's file already downloaded fine regardless of this.
       if (format !== 'email') {
-        const label = FORMATS.find((f) => f.id === format)?.label ?? format;
+        const label = formats.find((f) => f.id === format)?.label ?? format;
         const { subject, body } = exportNotificationEmail(
           currentLead,
           label,
@@ -186,7 +220,7 @@ export function ExportMenu({
       </button>
       {open && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {FORMATS.map((f) => (
+          {formats.map((f) => (
             <button
               key={f.id}
               className="btn"
@@ -200,8 +234,9 @@ export function ExportMenu({
             </button>
           ))}
           <p className="note">
-            SketchUp (.skp) and Revit (.rvt) can’t be written in a browser — for 3D import the GLB or
-            OBJ, for 2D the DXF. They open cleanly in both.
+            Your WALL is exported as GLB/OBJ for 3D and DXF for 2D — a browser can’t write .skp or
+            .rvt, and both of those import cleanly. For the TILE itself, the CAD pack carries Pretty
+            Plastic’s own SketchUp, STL, IFC and DWG files.
           </p>
           {msg && <p className="warn">{msg}</p>}
         </div>

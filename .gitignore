@@ -8,6 +8,9 @@ samples/
 # raw full-res tile photos (originals stay local; the app ships the
 # downscaled copies in public/textures/ via scripts/import-textures.sh)
 images/
+# raw CAD documentation, ~51 MB (originals stay local; the app ships the
+# per-product download packs in public/cad/ via scripts/import-cad.sh)
+autocad/
 # recorded walkthroughs live in videos/ (scripts/record-demo.mjs) — left
 # untracked rather than ignored, so they show up in the file tree
 videos/raw/
