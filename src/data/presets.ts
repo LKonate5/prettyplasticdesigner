@@ -76,7 +76,7 @@ export const PRESETS: Preset[] = [
     swatch: ['ochre-light', 'ochre-dark', 'terracotta-dark'],
     config: {
       type: 'gradient',
-      gradient: { direction: 'vertical' },
+      gradient: { direction: 'horizontal' }, // horizontal bands: the fade runs down the wall
       toneVariation: 0.3,
       allowedMaterials: [
         'ochre-light', 'ochre-medium', 'ochre-dark', 'terracotta-medium', 'terracotta-dark',

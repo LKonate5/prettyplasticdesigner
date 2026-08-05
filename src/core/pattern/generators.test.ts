@@ -109,6 +109,53 @@ describe('pattern generators', () => {
     }
   });
 
+  // Direction names the bands you see, matching the identically-labelled
+  // Stripes control. Nothing about a gradient's output says which axis it read,
+  // so without this the two controls can drift back apart unnoticed.
+  it('gradient direction names the bands, so horizontal bands run across', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const { patternRows: rows, patternCols: cols } = layout;
+    const at = (cells: Cell[], row: number, col: number) => cells[row * cols + col].material;
+
+    const across = generatePattern(
+      base({ type: 'gradient', toneVariation: 0, gradient: { direction: 'horizontal' } }),
+      layout,
+    );
+    for (let row = 0; row < rows; row++) {
+      for (let col = 1; col < cols; col++) expect(at(across, row, col)).toBe(at(across, row, 0));
+    }
+    expect(at(across, rows - 1, 0)).not.toBe(at(across, 0, 0));
+
+    const down = generatePattern(
+      base({ type: 'gradient', toneVariation: 0, gradient: { direction: 'vertical' } }),
+      layout,
+    );
+    for (let col = 0; col < cols; col++) {
+      for (let row = 1; row < rows; row++) expect(at(down, row, col)).toBe(at(down, 0, col));
+    }
+    expect(at(down, 0, cols - 1)).not.toBe(at(down, 0, 0));
+  });
+
+  it('gradient and stripes read the same axis for the same direction name', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const cols = layout.patternCols;
+    const constantAcrossEachRow = (cells: Cell[]) =>
+      cells.every((cell, i) => cell.material === cells[Math.floor(i / cols) * cols].material);
+
+    for (const type of ['gradient', 'stripes'] as const) {
+      const cells = generatePattern(
+        base({
+          type,
+          toneVariation: 0,
+          gradient: { direction: 'horizontal' },
+          stripes: { direction: 'horizontal', width: 2 },
+        }),
+        layout,
+      );
+      expect(constantAcrossEachRow(cells)).toBe(true);
+    }
+  });
+
   it('solid with toneVariation 0 is uniform; with tone > 0 it varies shade only', () => {
     const layout = layoutSecondHigh(8, 8);
     const flat = generatePattern(base({ type: 'solid', toneVariation: 0 }), layout);

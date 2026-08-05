@@ -58,6 +58,34 @@ describe('share encode/decode', () => {
     expect(decoded!.cells[3]).toEqual({ material: 11, rotation: 270 });
   });
 
+  it('reads a pre-flip link\'s gradient direction swapped, so it opens as priced', () => {
+    // `gd` predates naming Direction for the bands it draws: back then
+    // "vertical" meant the colour ran down the wall, which is what "horizontal"
+    // means now. Quotes already sent carry links like this one.
+    const legacy = {
+      p: 'first-one',
+      r: 10,
+      c: 10,
+      e: 450,
+      b: 1,
+      t: 'gradient',
+      s: 7,
+      tv: 0.3,
+      sm: 0,
+      am: [0, 1, 2],
+      gd: 'vertical',
+      sdir: 'horizontal',
+      sw: 2,
+      w: 0.1,
+      o: [],
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(legacy))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    expect(decodeDesign(encoded)?.pattern.gradient.direction).toBe('horizontal');
+  });
+
   it('carries product, size, options and pattern settings', () => {
     const design = initialDesign('basic-third', 42);
     design.options = { exposure: 380, bond: 'stacked' };

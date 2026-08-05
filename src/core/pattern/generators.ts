@@ -56,12 +56,17 @@ function baseMaterial(
       return list[Math.floor(rng() * n)];
     case 'gradient': {
       let t: number;
+      // Direction names the BANDS you end up looking at, not the axis the
+      // colour travels along. Horizontal bands mean the colour has to change
+      // down the wall, so "horizontal" reads rows. Stripes below has always
+      // worked this way and the two share one "Direction" label, so a gradient
+      // that read the opposite axis put the same word on opposite results.
       switch (config.gradient.direction) {
         case 'horizontal':
-          t = col / maxCol;
+          t = row / maxRow;
           break;
         case 'vertical':
-          t = row / maxRow;
+          t = col / maxCol;
           break;
         case 'diagonal':
           t = (col / maxCol + row / maxRow) / 2;

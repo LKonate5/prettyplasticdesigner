@@ -74,7 +74,9 @@ export function defaultPattern(seed: number): PatternConfig {
     allowedMaterials: [...MATERIAL_IDS],
     toneVariation: 0.35,
     solidMaterial: 'grey-medium',
-    gradient: { direction: 'vertical' },
+    // horizontal bands, i.e. the colour fades down the wall — sky to ground is
+    // the gradient a facade usually wants first
+    gradient: { direction: 'horizontal' },
     stripes: { direction: 'horizontal', width: 2 },
   };
 }

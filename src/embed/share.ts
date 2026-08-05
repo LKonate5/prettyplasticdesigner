@@ -16,6 +16,8 @@ import { PRODUCTS } from '../data/products';
  * as an unrotated tile.
  */
 
+type GradientDirection = 'horizontal' | 'vertical' | 'diagonal';
+
 interface Packed {
   p: ProductId;
   r: number;
@@ -27,7 +29,8 @@ interface Packed {
   tv: number; // toneVariation
   sm: number; // solidMaterial index
   am: number[]; // allowedMaterials indices
-  gd: 'horizontal' | 'vertical' | 'diagonal';
+  gdir?: GradientDirection; // gradient direction, named for the bands it draws
+  gd?: GradientDirection; // pre-flip gradient direction — decode only, see below
   sdir: 'horizontal' | 'vertical';
   sw: number; // stripe width
   w: number; // waste fraction
@@ -35,6 +38,25 @@ interface Packed {
 }
 
 const PRODUCT_IDS: ProductId[] = ['first-one', 'second-high', 'basic-third'];
+
+const FLIPPED: Record<GradientDirection, GradientDirection> = {
+  horizontal: 'vertical',
+  vertical: 'horizontal',
+  diagonal: 'diagonal',
+};
+
+/**
+ * Links written before gradient Direction was named for its bands carry `gd`,
+ * where the name meant the axis the colour travelled along instead — the exact
+ * opposite for the two straight directions. Read those swapped rather than
+ * letting them through: every quote Pretty Plastic has been sent carries a link
+ * to "this exact design", and it has to still open the design that was priced,
+ * not one turned ninety degrees.
+ */
+function gradientDirection(packed: Packed): GradientDirection {
+  if (packed.gdir) return packed.gdir;
+  return packed.gd ? FLIPPED[packed.gd] : 'horizontal';
+}
 
 function baselineCells(design: DesignState): Cell[] {
   const layout = computeLayout(
@@ -66,7 +88,7 @@ export function encodeDesign(design: DesignState): string {
     tv: design.pattern.toneVariation,
     sm: materialIndex(design.pattern.solidMaterial),
     am: design.pattern.allowedMaterials.map(materialIndex),
-    gd: design.pattern.gradient.direction,
+    gdir: design.pattern.gradient.direction,
     sdir: design.pattern.stripes.direction,
     sw: design.pattern.stripes.width,
     w: design.wastePct,
@@ -93,7 +115,7 @@ export function decodeDesign(str: string): DesignState | null {
         ),
         toneVariation: packed.tv,
         solidMaterial: asMaterial(packed.sm),
-        gradient: { direction: packed.gd },
+        gradient: { direction: gradientDirection(packed) },
         stripes: { direction: packed.sdir, width: packed.sw },
       },
       cells: [],
