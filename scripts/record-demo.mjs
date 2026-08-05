@@ -509,6 +509,35 @@ async function record() {
     await turn('horizontal', 'Horizontal it is');
   });
 
+  await step('tone variation', async () => {
+    // Gradient still reads toneVariation — it dithers the band edges rather
+    // than being ignored (see generators.ts) — so bumping it here is a real,
+    // visible change, not a slider move with nothing behind it. Done before
+    // the hand-painted tiles below so those land on top of the dithered
+    // gradient rather than the crisper one.
+    await say(page, 'A touch of natural variation');
+    const tone = page.locator('.field:has(label:text("Tone variation")) input[type="range"]');
+    await scrollPanelTo(page, tone, 300);
+    const box = await tone.boundingBox();
+    const PAD = 8; // half the range thumb
+    const xFor = (v) => box.x + PAD + (box.width - PAD * 2) * v; // range is 0–1
+    const y = box.y + box.height / 2;
+    const start = Number(await tone.inputValue());
+    const target = Math.min(1, start + 0.25);
+    await moveTo(page, xFor(start), y, 320);
+    await beat(160);
+    await page.mouse.down();
+    await moveTo(page, xFor(target), y, 420, 7);
+    await page.mouse.up();
+    for (let i = 0; i < 25; i++) {
+      const v = Number(await tone.inputValue());
+      if (Math.abs(v - target) < 0.001) break;
+      await page.keyboard.press(v < target ? 'ArrowRight' : 'ArrowLeft');
+      await sleep(40 / SPEED);
+    }
+    await beat(700);
+  });
+
   await step('terracotta light', async () => {
     await say(page, 'Hand-paint with light Terracotta');
     // the palette sits below the fold at this scroll position — bring it into
