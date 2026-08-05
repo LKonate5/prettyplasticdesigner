@@ -11,9 +11,17 @@ images/
 # raw CAD documentation, ~51 MB (originals stay local; the app ships the
 # per-product download packs in public/cad/ via scripts/import-cad.sh)
 autocad/
-# recorded walkthroughs live in videos/ (scripts/record-demo.mjs) — left
-# untracked rather than ignored, so they show up in the file tree
+# the recorded walkthroughs are output, not source: scripts/record-demo.mjs is
+# the beat sheet they come out of, and every re-shoot is a fresh 10-14 MB binary
+# that git can only store whole. Re-record rather than clone them:
+#   npm run demo -- --name=facade-designer-v2
+#   npm run demo -- --grid=7x7 --name=facade-designer-v1
+# The caption timings next to them stay tracked — those are text, and the
+# narration is cut against them.
 videos/raw/
+videos/*.mp4
+videos/*.gif
+videos/*.webm
 *.log
 .DS_Store
 *.local
