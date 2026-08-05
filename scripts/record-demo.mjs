@@ -3,11 +3,11 @@
  * Records a scripted walkthrough of the Facade Designer and writes an MP4 (+GIF).
  *
  * The take: pick First One, size the wall, run through three quick looks
- * (Terracotta blend → Greens → Earthy mix), lay them out three ways (gradient →
- * checker → back to gradient, then turned left to right), hand-paint a four-tile
- * diamond in Ochre Medium high on the right and another in Grey Medium low on
- * the left, set a 15% waste allowance, then request a quote with the project
- * details filled in and send.
+ * (Terracotta blend → Greens → Ochre & green), lay them out three ways (gradient →
+ * checker → back to gradient, then turned vertical → diagonal → horizontal),
+ * hand-paint a four-tile diamond in Ochre Medium high on the right and another
+ * in Grey Medium low on the left, set a 15% waste allowance, then request a
+ * quote with the project details filled in and send.
  *
  * The take is deterministic — every move, click and pause is a beat below — so
  * the video can be re-shot identically after a UI tweak. Playwright captures the
@@ -25,11 +25,11 @@
  * Nothing leaves the machine: /api/send-email is stubbed so the final "Sent!"
  * confirmation appears without touching Resend or the visitor's mail app.
  */
-import { spawnSync } from 'node:child_process';
-import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { probeDuration, run, verify } from './lib/ffmpeg.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -42,12 +42,14 @@ const flag = (name, fallback) => {
 };
 
 const URL_ = flag('url', 'http://localhost:5173/');
-const SPEED = Number(flag('speed', 1)) || 1;
+// Slower than a silent showcase clip would want — the narrated cut needs the
+// extra headroom per beat for each voiceover line to finish without overlap.
+const SPEED = Number(flag('speed', 0.82)) || 0.82;
 const HEADED = Boolean(flag('headed', false));
 const MAKE_GIF = !flag('no-gif', false);
 const KEEP_WEBM = Boolean(flag('keep-webm', false));
 const VERBOSE = Boolean(flag('verbose', false));
-const BUDGET_S = Number(flag('budget', 50)) || 50;
+const BUDGET_S = Number(flag('budget', 65)) || 65;
 const TARGET_S = BUDGET_S - 2; // aim under, so a slow take still clears the cap
 const MAX_FIT = 1.45; // beyond this the playback reads as fast-forward
 
@@ -97,14 +99,12 @@ function installOverlay() {
         border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 1.5px rgba(0,0,0,.35);
         animation:demo-ripple .5s cubic-bezier(.2,.7,.3,1) forwards}
       @keyframes demo-ripple{from{transform:scale(.35);opacity:1}to{transform:scale(3);opacity:0}}
-      #demo-caption{position:fixed;left:50%;bottom:36px;transform:translate(-50%,12px);
+      #demo-caption{position:fixed;left:50%;bottom:40px;transform:translate(-50%,12px);
         z-index:2147483645;pointer-events:none;white-space:nowrap;
-        font:500 16px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
-        letter-spacing:.005em;color:#fff;background:rgba(20,20,20,.82);
-        -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-        padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.15);
-        box-shadow:0 8px 28px rgba(0,0,0,.4);opacity:0;
-        transition:opacity .22s ease,transform .22s ease}
+        font:600 28px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
+        letter-spacing:.005em;color:#fff;
+        -webkit-text-stroke:2px rgba(0,0,0,.85);paint-order:stroke fill;
+        opacity:0;transition:opacity .22s ease,transform .22s ease}
       #demo-caption.on{opacity:1;transform:translate(-50%,0)}
     `;
     document.head.appendChild(style);
@@ -197,30 +197,38 @@ async function clickEl(page, locator, opts = {}) {
   await clickAt(page, box.x + box.width / 2, box.y + box.height / 2, opts);
 }
 
-const say = (page, text) => page.evaluate((t) => window.__demo?.caption(t), text);
+/**
+ * Every non-null caption is also logged with its wall-clock offset from `tPage`
+ * (set once recording starts, see record()). That's what lets add-narration.mjs
+ * time each voiceover line to the moment its on-screen caption actually
+ * appears, without re-deriving timing from the finished MP4.
+ */
+const captionLog = [];
+let tPage = 0;
+async function say(page, text) {
+  await page.evaluate((t) => window.__demo?.caption(t), text);
+  if (text) captionLog.push({ text, atMs: Date.now() - tPage });
+}
 
 /**
- * Click out the four-tile diamond nearest (ax, ay) — see pickDiamond — in the
- * currently selected swatch, named here only so the result can be checked.
+ * Click `picks` (from pickRandomTiles) in the currently selected swatch,
+ * named here only so the result can be checked.
  *
  * Worth checking: a click that misses a tile is silent. The pattern underneath
- * is ochre in places too, so a diamond that never landed still looks plausible
- * in the finished video — and the hand-painting is half of what the take is
- * for. Compare against the swatch's own colour rather than a copy of the
- * palette kept here, so a repaint of the app can't quietly invalidate it.
+ * shares colours with the swatch in places too, so a tile that never landed
+ * still looks plausible in the finished video — and the hand-painting is half
+ * of what the take is for. Compare against the swatch's own colour rather
+ * than a copy of the palette kept here, so a repaint of the app can't quietly
+ * invalidate it.
  */
-async function paintDiamond(page, materialName, ax, ay) {
-  const picks = await pickDiamond(page, ax, ay);
-  if (picks.length !== 4) {
-    throw new Error(`no room for a four-tile diamond near ${ax}, ${ay} of the wall`);
-  }
+async function paint(page, materialName, picks) {
   for (const t of picks) {
     await clickAt(page, t.x, t.y, { travel: 250, settle: 70 });
     await beat(70);
   }
   await beat(320);
 
-  const materialId = materialName.toLowerCase().replace(/\s+/g, '-'); // "Ochre Dark" → ochre-dark
+  const materialId = materialName.toLowerCase().replace(/\s+/g, '-'); // "Terracotta Dark" → terracotta-dark
   const painted = await page.evaluate(
     ([cells, id, name]) => {
       const swatch = document.querySelector(`button.swatch[title^="${name}"]`);
@@ -248,8 +256,8 @@ async function paintDiamond(page, materialName, ax, ay) {
     },
     [picks.map((p) => p.cell), materialId, materialName],
   );
-  if (painted !== 4) {
-    throw new Error(`only ${painted} of 4 tiles came out ${materialName} — a click missed`);
+  if (painted !== picks.length) {
+    throw new Error(`only ${painted} of ${picks.length} tiles came out ${materialName} — a click missed`);
   }
 }
 
@@ -269,115 +277,68 @@ async function scrollPanelTo(page, locator, targetY) {
 }
 
 /**
- * Four tiles of the real wall that meet as one larger diamond, sited as close to
- * (ax, ay) — fractions of the wall — as the geometry allows.
+ * `count` tiles of the real wall picked at random and scattered across it,
+ * rather than clustered into a shape — deduped by hit test so two picks
+ * never land on the same cell.
  *
- * First One is a fish-scale of diamonds, and adjacent rows are offset by half a
- * pitch. So a tile, its right-hand neighbour, and the two tiles half a pitch
- * along sitting above and below the seam between them share four edges and read
- * as a single diamond at twice the size — the motif you'd actually pick out on a
- * facade. Sizes come off the rendered tiles rather than the mm constants, so a
- * zoom or a viewport change can't put the picks between tiles.
- *
- * Returned in a path around the shape (top, left, bottom, right) so the cursor
- * draws the diamond instead of hopping across it.
+ * Sizes and positions come off the rendered tiles rather than the mm
+ * constants, so a zoom or a viewport change can't put a pick between tiles.
+ * Random per take (like the pattern's own seed, reassigned on every preset
+ * click) rather than pinned, so re-shoots don't paint identically.
  */
-async function pickDiamond(page, ax, ay) {
+async function pickRandomTiles(page, count) {
   return page.evaluate(
-    ([ax, ay]) => {
+    (count) => {
       const svg = document.querySelector('.preview svg');
       const groups = [...svg.querySelectorAll(':scope > g')];
       // the wall itself is the only untransformed group holding tiles; the
       // others are seamless repeats (translated) and the frame overlay
       const real = groups.find((g) => !g.hasAttribute('transform') && g.querySelector('[data-cell]'));
       const wall = real.getBoundingClientRect();
-      const anchor = { x: wall.x + wall.width * ax, y: wall.y + wall.height * ay };
 
       const tiles = [...real.querySelectorAll('[data-cell]')].map((g) => {
         const r = g.getBoundingClientRect();
         return { cx: r.x + r.width / 2, cy: r.y + r.height / 2, w: r.width, h: r.height };
       });
-      // the whole tiles set the pitch; every edge tile is a clipped half
       const pitchX = Math.max(...tiles.map((t) => t.w));
       const pitchY = Math.max(...tiles.map((t) => t.h));
 
-      const cluster = (t) => [
-        [t.cx + pitchX / 2, t.cy - pitchY / 2], // top
-        [t.cx, t.cy], // left
-        [t.cx + pitchX / 2, t.cy + pitchY / 2], // bottom
-        [t.cx + pitchX, t.cy], // right
-      ];
-
-      // inside the wall by a comfortable margin (so no member is a cut edge
+      // inside the wall by a comfortable margin (so no pick is a cut edge
       // tile), and clear of the caption pill and the zoom bar
-      const safe = (x, y) =>
-        x > wall.x + pitchX * 0.6 &&
-        x < wall.x + wall.width - pitchX * 0.6 &&
-        y > wall.y + pitchY * 0.6 &&
-        y < wall.y + wall.height - pitchY * 0.6 &&
-        y < innerHeight - 130 &&
-        !(x > innerWidth - 190 && y > innerHeight - 130);
-
-      const candidates = tiles
-        .filter((t) => t.w > pitchX * 0.9 && t.h > pitchY * 0.9)
-        // rank on where the finished diamond lands, not on its left-hand tile
-        .sort(
-          (a, b) =>
-            Math.hypot(a.cx + pitchX / 2 - anchor.x, a.cy - anchor.y) -
-            Math.hypot(b.cx + pitchX / 2 - anchor.x, b.cy - anchor.y),
-        );
-
-      for (const t of candidates) {
-        const points = cluster(t);
-        if (!points.every(([x, y]) => safe(x, y))) continue;
-        const picks = [];
-        const seen = new Set();
-        for (const [x, y] of points) {
-          // whichever tile actually receives the click at that point wins
-          const hit = document.elementFromPoint(x, y)?.closest?.('[data-cell]');
-          if (!hit || !real.contains(hit)) break;
-          const cell = hit.getAttribute('data-cell');
-          if (seen.has(cell)) break; // four distinct cells or it isn't a diamond
-          seen.add(cell);
-          picks.push({ x: Math.round(x), y: Math.round(y), cell });
-        }
-        if (picks.length === 4) return picks;
+      const candidates = tiles.filter(
+        (t) =>
+          t.w > pitchX * 0.9 &&
+          t.h > pitchY * 0.9 &&
+          t.cx > wall.x + pitchX * 0.6 &&
+          t.cx < wall.x + wall.width - pitchX * 0.6 &&
+          t.cy > wall.y + pitchY * 0.6 &&
+          t.cy < wall.y + wall.height - pitchY * 0.6 &&
+          t.cy < innerHeight - 130 &&
+          !(t.cx > innerWidth - 190 && t.cy > innerHeight - 130),
+      );
+      // Fisher-Yates rather than sort(() => Math.random() - 0.5), which biases
+      // toward whatever the comparator's quirks happen to favour.
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
       }
-      return [];
+
+      const picks = [];
+      const seen = new Set();
+      for (const t of candidates) {
+        // whichever tile actually receives the click at that point wins
+        const hit = document.elementFromPoint(t.cx, t.cy)?.closest?.('[data-cell]');
+        if (!hit || !real.contains(hit)) continue;
+        const cell = hit.getAttribute('data-cell');
+        if (seen.has(cell)) continue;
+        seen.add(cell);
+        picks.push({ x: Math.round(t.cx), y: Math.round(t.cy), cell });
+        if (picks.length >= count) break;
+      }
+      return picks;
     },
-    [ax, ay],
+    count,
   );
-}
-
-// ── ffmpeg ───────────────────────────────────────────────────────────────────
-function run(cmd, args) {
-  const res = spawnSync(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
-  if (res.error) throw res.error;
-  if (res.status !== 0) throw new Error(`${cmd} failed:\n${res.stderr?.slice(-1200)}`);
-  return res.stdout.trim();
-}
-
-function probeDuration(file) {
-  return Number(
-    run('ffprobe', [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'default=nw=1:nk=1',
-      file,
-    ]),
-  );
-}
-
-/**
- * Decode the whole file to /dev/null. A half-copied mp4 still looks fine to
- * `ls` but has no moov atom, which is exactly what QuickTime reports as "not
- * compatible" — catch it here rather than on the user's screen.
- */
-function verify(file) {
-  run('ffmpeg', ['-v', 'error', '-i', file, '-f', 'null', '-']);
-  const d = probeDuration(file);
-  if (!Number.isFinite(d) || d < 1) throw new Error(`${file} probed as ${d}s — bad encode`);
-  return d;
 }
 
 // ── the take ─────────────────────────────────────────────────────────────────
@@ -415,7 +376,7 @@ async function record() {
 
   // recording starts with the page, so everything before the wall is painted in
   // is blank-screen boot — timed here, trimmed off on encode
-  const tPage = Date.now();
+  tPage = Date.now();
   const page = await context.newPage();
 
   // Hard network guard. emailEndpoint() resolves to the PRODUCTION endpoint
@@ -507,9 +468,9 @@ async function record() {
       await clickEl(page, page.locator(`button.preset[title="${name}"]`), { travel });
       await beat(760);
     };
-    await look('Terracotta blend', 'Try a quick look — Terracotta blend', 400);
-    await look('Greens', '…or go all greens', 300);
-    await look('Earthy mix', '…or an earthy mix of all twelve', 300);
+    await look('Terracotta blend', 'Try a quick look, Terracotta blend', 400);
+    await look('Greens', 'Or go all greens', 300);
+    await look('Ochre & green', 'Or Ochre and green', 300);
   });
 
   await step('pattern', async () => {
@@ -524,43 +485,46 @@ async function record() {
       await select.selectOption(value);
       await beat(800);
     };
-    await pick('gradient', 'Lay the same colours out as a gradient');
-    await pick('checker', '…or a checker');
-    await pick('gradient', '…gradient it is');
+    await pick('gradient', 'Now, a gradient');
+    await pick('checker', 'Or a checker');
+    await pick('gradient', 'Gradient it is');
 
     // The gradient's own Direction control — it only exists while the type is
-    // Gradient, hence the tail of this step. Vertical by default, so this is
-    // the beat that turns the bands from courses into columns.
+    // Gradient, hence the tail of this step. Direction now names the bands you
+    // actually see (fixed post-169e143), so the label can be taken at face
+    // value: vertical bands, then diagonal, landing on horizontal.
     const direction = page.locator(
       '.section:has(h2:text-is("Pattern")) .field:has(label:text-is("Direction")) select',
     );
-    await say(page, '…running left to right');
+    const turn = async (value, caption) => {
+      await say(page, caption);
+      await direction.selectOption(value);
+      await beat(800);
+    };
     const dirBox = await direction.boundingBox();
     await moveTo(page, dirBox.x + dirBox.width / 2, dirBox.y + dirBox.height / 2, 300);
     await beat(200);
-    await direction.selectOption('horizontal');
-    await beat(820);
+    await turn('vertical', 'Now, vertical');
+    await turn('diagonal', 'Or diagonal');
+    await turn('horizontal', 'Horizontal it is');
   });
 
-  await step('ochre medium', async () => {
-    await say(page, 'Now paint tiles by hand — Ochre Medium');
+  await step('terracotta light', async () => {
+    await say(page, 'Hand-paint with light Terracotta');
     // the palette sits below the fold at this scroll position — bring it into
     // view once so both swatch clicks land
     await scrollPanelTo(page, page.locator('.palette-grid'), 430);
-    await clickEl(page, page.locator('button.swatch[title^="Ochre Medium"]'), { travel: 380 });
+    await clickEl(page, page.locator('button.swatch[title^="Terracotta Light"]'), { travel: 380 });
     await beat(300);
-    await say(page, 'Four tiles make one bigger diamond');
-    // Each diamond sits against the far end of the palette: the horizontal
-    // gradient runs ochre on the left to grey on the right, so an ochre reads
-    // over on the grey side and a grey reads back on the ochre side.
-    await paintDiamond(page, 'Ochre Medium', 0.88, 0.14); // high and right
+    await say(page, 'Scattered by hand');
+    await paint(page, 'Terracotta Light', await pickRandomTiles(page, 3));
   });
 
-  await step('grey medium', async () => {
-    await say(page, '…and Grey Medium in the opposite corner');
-    await clickEl(page, page.locator('button.swatch[title^="Grey Medium"]'), { travel: 400 });
+  await step('terracotta dark', async () => {
+    await say(page, 'And dark Terracotta');
+    await clickEl(page, page.locator('button.swatch[title^="Terracotta Dark"]'), { travel: 400 });
     await beat(280);
-    await paintDiamond(page, 'Grey Medium', 0.12, 0.86); // low and left
+    await paint(page, 'Terracotta Dark', await pickRandomTiles(page, 5));
     await beat(220);
   });
 
@@ -601,7 +565,7 @@ async function record() {
     // Type the first field so the form reads as hand-filled, then fill() the
     // rest: every keystroke re-renders the wall behind the modal, and 40 of
     // them cost more screen time than the whole painting sequence.
-    await say(page, 'Who you are…');
+    await say(page, 'Who you are');
     await clickEl(page, page.locator('#lead-first-name'), { travel: 440 });
     await page.keyboard.type(DEMO_LEAD.first, { delay: 45 / SPEED });
     await beat(140);
@@ -615,7 +579,7 @@ async function record() {
     // Project name and phase are optional in the form. Fill them anyway: this
     // take is the worked example, and they are what lets Pretty Plastic quote
     // against a real project instead of a bare square-metre figure.
-    await say(page, '…and what the project is');
+    await say(page, 'And the project');
     await page.locator('#lead-project-name').fill(DEMO_LEAD.projectName);
     await beat(200);
     // the phase is a real click, so the cursor visibly reaches the project
@@ -626,17 +590,16 @@ async function record() {
     await beat(420);
 
     // Area and product below are already filled in from the design itself.
-    await say(page, 'Area and product come from the design');
+    await say(page, 'Pulled from the design');
     await beat(760);
     await clickEl(page, page.getByRole('button', { name: 'Continue', exact: true }), { travel: 380 });
     await page.locator('#preview-subject').waitFor({ timeout: 10_000 });
-    await say(page, 'Everything is written for you — edit or just send');
+    await say(page, 'Edit it, or just send');
     await beat(1400);
   });
 
   await step('send', async () => {
     await clickEl(page, page.getByRole('button', { name: 'Send', exact: true }), { travel: 380 });
-    await say(page, 'Sending it over…');
     const t0 = Date.now();
     await page.locator('p.note', { hasText: 'Sent!' }).waitFor({ timeout: 60_000 });
     sendSeconds = (Date.now() - t0) / 1000;
@@ -644,9 +607,14 @@ async function record() {
       throw new Error('the app reported "Sent!" without the stub firing — a real email may have gone out');
     }
     await say(page, 'Sent straight to Pretty Plastic');
-    await beat(1600);
+    await beat(1200);
+    // The closing line — extra tail time (beat below) so it has room to be
+    // read and spoken in full before the recording ends, rather than landing
+    // right at the edge and getting clipped by add-narration's -shortest mux.
+    await say(page, 'Our new design tool to start building from waste');
+    await beat(3200);
     await say(page, null);
-    await beat(350);
+    await beat(400);
   });
 
   const video = page.video();
@@ -716,6 +684,16 @@ if (!KEEP_WEBM) await rm(RAW_DIR, { recursive: true, force: true });
 const dur = verify(mp4); // re-check after the GIF pass and the raw cleanup
 const mb = async (f) => ((await stat(f)).size / 1e6).toFixed(1);
 
+// Captions were timestamped against the raw capture; replay them through the
+// same trim + speed-fit the video itself went through so a line's offset
+// lands on the same frame the caption pill appeared on.
+const captionsFile = path.join(OUT_DIR, `${NAME}.captions.json`);
+const captions = captionLog.map(({ text, atMs }) => ({
+  text,
+  atS: Math.min(Math.max((atMs / 1000 - trim) / fit, 0), dur),
+}));
+await writeFile(captionsFile, `${JSON.stringify(captions, null, 2)}\n`);
+
 console.log('\n  beats');
 for (const [label, s] of marks) console.log(`    ${label.padEnd(18)} ${s.toFixed(1)}s`);
 console.log(
@@ -728,6 +706,7 @@ console.log(
 );
 console.log(`  ${path.relative(ROOT, mp4)}  ${dur.toFixed(1)}s  ${await mb(mp4)} MB`);
 if (gif) console.log(`  ${path.relative(ROOT, gif)}  ${await mb(gif)} MB`);
+console.log(`  ${path.relative(ROOT, captionsFile)}  ${captions.length} lines`);
 
 if (dur > BUDGET_S) {
   const suggest = (SPEED * (dur / TARGET_S)).toFixed(2);

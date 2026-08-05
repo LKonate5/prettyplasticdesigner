@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo": "node scripts/record-demo.mjs"
+    "demo": "node scripts/record-demo.mjs",
+    "narrate": "node --env-file-if-exists=.env scripts/add-narration.mjs"
   },
   "dependencies": {
     "jspdf": "^3.0.1",
@@ -19,6 +20,7 @@
     "resend": "^4.8.0"
   },
   "devDependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.60.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vercel/node": "^3.2.29",
