@@ -44,12 +44,15 @@ const flag = (name, fallback) => {
 const URL_ = flag('url', 'http://localhost:5173/');
 // Slower than a silent showcase clip would want — the narrated cut needs the
 // extra headroom per beat for each voiceover line to finish without overlap.
-const SPEED = Number(flag('speed', 0.82)) || 0.82;
+// 0.82 still ran most lines a touch behind their beat (small per-line
+// narration overrun, see add-narration's "delayed Xs for spacing" log); 0.70
+// gives every beat more real margin instead of just the longest one.
+const SPEED = Number(flag('speed', 0.7)) || 0.7;
 const HEADED = Boolean(flag('headed', false));
 const MAKE_GIF = !flag('no-gif', false);
 const KEEP_WEBM = Boolean(flag('keep-webm', false));
 const VERBOSE = Boolean(flag('verbose', false));
-const BUDGET_S = Number(flag('budget', 78)) || 78;
+const BUDGET_S = Number(flag('budget', 100)) || 100;
 const TARGET_S = BUDGET_S - 2; // aim under, so a slow take still clears the cap
 const MAX_FIT = 1.45; // beyond this the playback reads as fast-forward
 
