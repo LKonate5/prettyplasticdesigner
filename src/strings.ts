@@ -15,11 +15,11 @@ export const STR = {
   heightM: 'Height (m)',
   advancedMetres: 'Set by width & height instead',
   renderedPreviewNote:
-    'Note: this product is shown as a rendered preview; these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
+    'Note: this product is shown as a rendered preview ; these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
   basicThirdPreviewNote:
     'Basic Third is currently shown as a rendered preview. Photography of the final Basic Third tiles will be integrated as soon as it is available.',
   borrowedPhotoNote:
-    'Note: Basic Third does not yet have its own tile photos, so this preview borrows First One photography in matching colours and shades; both are made from the same recycled material. The real Basic Third tiles will show their own three-band relief pattern.',
+    'Note: Basic Third does not yet have its own tile photos, so this preview borrows First One photography in matching colours and shades ; both are made from the same recycled material. The real Basic Third tiles will show their own three-band relief pattern.',
   bond: 'Bond',
   stacked: 'Stacked',
   staggered: 'Staggered',
@@ -78,9 +78,9 @@ export const STR = {
   area: 'Area',
   squareMetres: 'Square metres',
   tilesPerM2: 'tiles/m²',
-  scheduleNote: 'Counts include cut edge tiles and exclude site waste; verify before ordering.',
+  scheduleNote: 'Counts include cut edge tiles and exclude site waste ; verify before ordering.',
   fullSqmNote:
-    '* Pretty Plastic produces full square metres only; any part-metre rounds up to the next whole m².',
+    '* Pretty Plastic produces full square metres only ; any part-metre rounds up to the next whole m².',
 
   order: 'Order & quantities',
   waste: 'Waste allowance',
@@ -96,9 +96,9 @@ export const STR = {
   requestQuote: 'Request a quote',
   requestHint: 'Sends your request and a link to this exact design straight to Pretty Plastic.',
   emailSent: 'Sent! Pretty Plastic will be in touch.',
-  emailFallback: 'Could not send directly, so we opened your email app instead; just hit send there.',
+  emailFallback: 'Could not send directly, so we opened your email app instead ; just hit send there.',
 
-  capNotice: 'That size would exceed 5,000 tiles; reduce rows or columns.',
+  capNotice: 'That size would exceed 5,000 tiles ; reduce rows or columns.',
   regenNote:
     'Size and pattern changes regenerate the design. Hand-painted tiles may be replaced. Using the Undo button restores your design pattern.',
 

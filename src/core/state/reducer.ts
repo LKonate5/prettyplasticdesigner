@@ -28,6 +28,8 @@ export interface DesignState {
 }
 
 export const DEFAULT_WASTE = 0.1;
+/** Realistic ceiling for the waste allowance slider — see QuotePanel. */
+export const WASTE_MAX = 0.15;
 
 export interface AppState {
   past: DesignState[];
@@ -135,6 +137,10 @@ function clampExposure(n: number): number {
   return Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, Math.round(n)));
 }
 
+function clampWaste(n: number): number {
+  return Math.max(0, Math.min(WASTE_MAX, n));
+}
+
 /**
  * Commit a new present. `kind` marks continuous controls: consecutive commits
  * of the same kind replace the present instead of stacking history entries.
@@ -217,9 +223,11 @@ export function appReducer(state: AppState, action: Action): AppState {
         buildDesign(p.productId, p.rows, p.cols, p.options, { ...p.pattern, seed: action.seed }, p.wastePct),
       );
 
-    case 'SET_WASTE':
-      if (action.wastePct === p.wastePct) return state;
-      return commit(state, { ...p, wastePct: action.wastePct }, 'wastePct');
+    case 'SET_WASTE': {
+      const wastePct = clampWaste(action.wastePct);
+      if (wastePct === p.wastePct) return state;
+      return commit(state, { ...p, wastePct }, 'wastePct');
+    }
 
     case 'RESET': {
       const { rows, cols } = DEFAULT_GRID[p.productId];

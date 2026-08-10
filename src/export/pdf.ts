@@ -29,7 +29,7 @@ export async function exportPdf(
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('Pretty Plastic; Façade Design', margin, 10);
+  doc.text('Pretty Plastic ; Façade Design', margin, 10);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text(`${product.name}   ·   ${dateLabel}`, margin, 16.5);
@@ -51,7 +51,7 @@ export async function exportPdf(
   doc.setTextColor(110, 109, 104);
   doc.setFontSize(8.5);
   doc.text(
-    `Elevation; ${mmToM(schedule.wallW)} × ${mmToM(schedule.wallH)} m`,
+    `Elevation ; ${mmToM(schedule.wallW)} × ${mmToM(schedule.wallH)} m`,
     margin,
     boxY + imgH + 5,
   );
@@ -98,9 +98,9 @@ export async function exportPdf(
   doc.line(margin, footY - 4, pageW - margin, footY - 4);
   doc.setTextColor(110, 109, 104);
   doc.setFontSize(7.5);
-  doc.text('Generated with the Pretty Plastic Façade Designer; prettyplastic.nl', margin, footY);
+  doc.text('Generated with the Pretty Plastic Façade Designer ; prettyplastic.nl', margin, footY);
   doc.text(
-    'Quantities include cut edge tiles and exclude site waste; verify before ordering.',
+    'Quantities include cut edge tiles and exclude site waste ; verify before ordering.',
     margin,
     footY + 4,
   );

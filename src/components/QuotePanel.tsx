@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Order, Schedule } from '../core/schedule';
+import { WASTE_MAX } from '../core/state/reducer';
 import { STR } from '../strings';
 
 /**
@@ -33,7 +34,7 @@ export function QuotePanel({
           id="waste"
           type="range"
           min={0}
-          max={0.25}
+          max={WASTE_MAX}
           step={0.01}
           value={wastePct}
           onChange={(e) => onWaste(Number(e.target.value))}

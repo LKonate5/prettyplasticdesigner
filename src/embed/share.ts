@@ -1,6 +1,6 @@
 import { computeLayout } from '../core/layout';
 import { generatePattern } from '../core/pattern/generators';
-import { DEFAULT_WASTE, type DesignState } from '../core/state/reducer';
+import { DEFAULT_WASTE, WASTE_MAX, type DesignState } from '../core/state/reducer';
 import type { Cell, MaterialId, PatternType, ProductId } from '../core/types';
 import { materialAt, materialIndex, MATERIAL_IDS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
@@ -119,7 +119,7 @@ export function decodeDesign(str: string): DesignState | null {
         stripes: { direction: packed.sdir, width: packed.sw },
       },
       cells: [],
-      wastePct: typeof packed.w === 'number' ? packed.w : DEFAULT_WASTE,
+      wastePct: typeof packed.w === 'number' ? Math.max(0, Math.min(WASTE_MAX, packed.w)) : DEFAULT_WASTE,
     };
     // Regenerate the baseline, then apply hand-painted material and T2 rotation
     // overrides. Rotation from old links is accepted too.

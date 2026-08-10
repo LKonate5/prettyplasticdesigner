@@ -90,7 +90,7 @@ function installOverlay() {
     if (window.__demo) return;
     const style = document.createElement('style');
     style.textContent = `
-      #demo-cursor{position:fixed;left:0;top:0;width:24px;height:24px;z-index:2147483647;
+      #demo-cursor{position:fixed;left:0;top:0;width:32px;height:32px;z-index:2147483647;
         pointer-events:none;opacity:0;transition:opacity .18s ease;will-change:transform;
         filter:drop-shadow(0 2px 5px rgba(0,0,0,.45))}
       #demo-cursor.on{opacity:1}
@@ -101,7 +101,7 @@ function installOverlay() {
       @keyframes demo-ripple{from{transform:scale(.35);opacity:1}to{transform:scale(3);opacity:0}}
       #demo-caption{position:fixed;left:50%;bottom:40px;transform:translate(-50%,12px);
         z-index:2147483645;pointer-events:none;white-space:nowrap;
-        font:600 28px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
+        font:600 28px/1.3 'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
         letter-spacing:.005em;color:#fff;
         -webkit-text-stroke:2px rgba(0,0,0,.85);paint-order:stroke fill;
         opacity:0;transition:opacity .22s ease,transform .22s ease}
@@ -113,7 +113,7 @@ function installOverlay() {
     cursor.id = 'demo-cursor';
     // arrow with its tip at 0,0 so translate(x,y) lands the hotspot on the pointer
     cursor.innerHTML =
-      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none">' +
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none">' +
       '<path d="M1 1 L1 18.4 L5.6 14.2 L8.6 20.8 L11.8 19.3 L8.8 12.9 L15 12.6 Z" ' +
       'fill="#fff" stroke="#141414" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 
@@ -469,8 +469,8 @@ async function record() {
       await beat(760);
     };
     await look('Terracotta blend', 'Try a quick look, Terracotta blend', 400);
-    await look('Greens', 'Or go all greens', 300);
-    await look('Ochre & green', 'Or Ochre and green', 300);
+    await look('Greens', 'Or go all Greens', 300);
+    await look('Ochre & green', 'Or Ochre and Green', 300);
   });
 
   await step('pattern', async () => {
@@ -557,13 +557,32 @@ async function record() {
     await beat(220);
   });
 
+  await step('undo hint', async () => {
+    // Longer, three-sentence caption — matches the app's own regenNote copy
+    // verbatim (see STR.regenNote), so the video says exactly what the tool
+    // says. Deliberately unhurried: this beat exists to give the sentence (and
+    // its narration) room to breathe, so the video runs a bit longer here.
+    await say(
+      page,
+      'Size and pattern changes regenerate the design. Hand-painted tiles may be replaced. Using the Undo button restores your design pattern.',
+    );
+    const tools = page.locator('.section:has(h2:text-is("Tools")) .row button');
+    await scrollPanelTo(page, tools.first(), 300);
+    const undoBox = await tools.nth(0).boundingBox();
+    const redoBox = await tools.nth(1).boundingBox();
+    await moveTo(page, undoBox.x + undoBox.width / 2, undoBox.y + undoBox.height / 2, 420);
+    await beat(900);
+    await moveTo(page, redoBox.x + redoBox.width / 2, redoBox.y + redoBox.height / 2, 380);
+    await beat(900);
+  });
+
   await step('waste', async () => {
     await say(page, 'Add a 15% waste allowance');
     const waste = page.locator('#waste');
     await scrollPanelTo(page, waste, 300);
     const box = await waste.boundingBox();
     const PAD = 8; // half the range thumb
-    const xFor = (v) => box.x + PAD + ((box.width - PAD * 2) * v) / 0.25;
+    const xFor = (v) => box.x + PAD + ((box.width - PAD * 2) * v) / 0.15; // slider's own max
     const y = box.y + box.height / 2;
     await moveTo(page, xFor(0.1), y, 360);
     await beat(180);
