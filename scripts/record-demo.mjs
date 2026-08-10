@@ -467,12 +467,15 @@ async function record() {
     // Three of the six one-click looks, so the row reads as a range rather than
     // a single button that happens to do something. Each applies a fresh seed,
     // so each is a full regenerate — the pauses are mostly the app, not pacing.
-    const look = async (name, caption, travel) => {
+    const look = async (name, caption, travel, pause = 760) => {
       await say(page, caption);
       await clickEl(page, page.locator(`button.preset[title="${name}"]`), { travel });
-      await beat(760);
+      await beat(pause);
     };
-    await look('Terracotta blend', 'Try a quick look, Terracotta blend', 400);
+    // Longer caption than the other two looks, so it needs more room after it
+    // — narration for "Try a quick look, Terracotta blend" was finishing just
+    // as the next line wanted to start.
+    await look('Terracotta blend', 'Try a quick look, Terracotta blend', 400, 1700);
     await look('Greens', 'Or go all Greens', 300);
     await look('Ochre & green', 'Or Ochre and Green', 300);
   });
