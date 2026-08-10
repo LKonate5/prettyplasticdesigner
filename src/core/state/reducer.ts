@@ -29,7 +29,7 @@ export interface DesignState {
 
 export const DEFAULT_WASTE = 0.1;
 /** Realistic ceiling for the waste allowance slider — see QuotePanel. */
-export const WASTE_MAX = 0.15;
+export const WASTE_MAX = 0.2;
 
 export interface AppState {
   past: DesignState[];

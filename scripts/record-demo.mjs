@@ -589,7 +589,9 @@ async function record() {
     await scrollPanelTo(page, waste, 300);
     const box = await waste.boundingBox();
     const PAD = 8; // half the range thumb
-    const xFor = (v) => box.x + PAD + ((box.width - PAD * 2) * v) / 0.15; // slider's own max
+    // Slider now goes 0-20% (WASTE_MAX); the demo still stops the drag at
+    // 15%, its own well-chosen realistic default, just short of the new max.
+    const xFor = (v) => box.x + PAD + ((box.width - PAD * 2) * v) / 0.2; // slider's own max
     const y = box.y + box.height / 2;
     await moveTo(page, xFor(0.1), y, 360);
     await beat(180);
