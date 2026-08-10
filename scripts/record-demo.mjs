@@ -49,7 +49,7 @@ const HEADED = Boolean(flag('headed', false));
 const MAKE_GIF = !flag('no-gif', false);
 const KEEP_WEBM = Boolean(flag('keep-webm', false));
 const VERBOSE = Boolean(flag('verbose', false));
-const BUDGET_S = Number(flag('budget', 65)) || 65;
+const BUDGET_S = Number(flag('budget', 78)) || 78;
 const TARGET_S = BUDGET_S - 2; // aim under, so a slow take still clears the cap
 const MAX_FIT = 1.45; // beyond this the playback reads as fast-forward
 
@@ -100,8 +100,9 @@ function installOverlay() {
         animation:demo-ripple .5s cubic-bezier(.2,.7,.3,1) forwards}
       @keyframes demo-ripple{from{transform:scale(.35);opacity:1}to{transform:scale(3);opacity:0}}
       #demo-caption{position:fixed;left:50%;bottom:40px;transform:translate(-50%,12px);
-        z-index:2147483645;pointer-events:none;white-space:nowrap;
-        font:600 28px/1.3 'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
+        z-index:2147483645;pointer-events:none;white-space:pre-line;max-width:80vw;
+        text-align:center;
+        font:600 28px/1.4 'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
         letter-spacing:.005em;color:#fff;
         -webkit-text-stroke:2px rgba(0,0,0,.85);paint-order:stroke fill;
         opacity:0;transition:opacity .22s ease,transform .22s ease}
@@ -558,22 +559,25 @@ async function record() {
   });
 
   await step('undo hint', async () => {
-    // Longer, three-sentence caption — matches the app's own regenNote copy
-    // verbatim (see STR.regenNote), so the video says exactly what the tool
-    // says. Deliberately unhurried: this beat exists to give the sentence (and
-    // its narration) room to breathe, so the video runs a bit longer here.
+    // Three-sentence caption — matches the app's own regenNote copy verbatim
+    // (see STR.regenNote), so the video says exactly what the tool says. Each
+    // sentence gets its own line (not one long unwrapped strip) via the
+    // pre-line caption CSS above. Deliberately slow: the narrated read of all
+    // three sentences runs ~9-10s, so this beat gives it real room on screen
+    // rather than letting the narration spill into (and desync) the next one.
     await say(
       page,
-      'Size and pattern changes regenerate the design. Hand-painted tiles may be replaced. Using the Undo button restores your design pattern.',
+      'Size and pattern changes regenerate the design.\nHand-painted tiles may be replaced.\nUsing the Undo button restores your design pattern.',
     );
     const tools = page.locator('.section:has(h2:text-is("Tools")) .row button');
     await scrollPanelTo(page, tools.first(), 300);
     const undoBox = await tools.nth(0).boundingBox();
     const redoBox = await tools.nth(1).boundingBox();
-    await moveTo(page, undoBox.x + undoBox.width / 2, undoBox.y + undoBox.height / 2, 420);
-    await beat(900);
-    await moveTo(page, redoBox.x + redoBox.width / 2, redoBox.y + redoBox.height / 2, 380);
-    await beat(900);
+    await moveTo(page, undoBox.x + undoBox.width / 2, undoBox.y + undoBox.height / 2, 500);
+    await beat(3000);
+    await moveTo(page, redoBox.x + redoBox.width / 2, redoBox.y + redoBox.height / 2, 500);
+    await beat(3000);
+    await beat(1500); // extra settle so the sentence finishes well before the next beat
   });
 
   await step('waste', async () => {
