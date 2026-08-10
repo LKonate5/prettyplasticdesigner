@@ -14,7 +14,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Surfaced in the browser console for debugging; no external reporting.
-    console.error('Facade Designer error:', error, info.componentStack);
+    console.error('Façade Designer error:', error, info.componentStack);
   }
 
   render() {

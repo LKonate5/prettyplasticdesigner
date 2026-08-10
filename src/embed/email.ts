@@ -48,7 +48,7 @@ export interface LeadRequestContext {
 
 function leadLines(lead: ExportLead): string[] {
   return [
-    `From: ${lead.firstName} ${lead.lastName} — ${lead.email} — ${lead.company}`,
+    `From: ${lead.firstName} ${lead.lastName}; ${lead.email}; ${lead.company}`,
     lead.projectName ? `Project name: ${lead.projectName}` : '',
     lead.projectPhase ? `Project phase: ${lead.projectPhase}` : '',
   ].filter((line) => line !== '');
@@ -94,7 +94,7 @@ export function exportNotificationEmail(
     `Design link: ${shareUrl(design)}`,
   ].join('\n');
   return {
-    subject: `${lead.firstName} ${lead.lastName} downloaded ${formatLabel} — Pretty Plastic Designer`,
+    subject: `${lead.firstName} ${lead.lastName} downloaded ${formatLabel}; Pretty Plastic Designer`,
     body,
   };
 }
@@ -154,7 +154,7 @@ export async function submitEmail(
     }
     return { ok: true };
   } catch {
-    return { ok: false, error: 'Could not reach the email service — check your connection.' };
+    return { ok: false, error: 'Could not reach the email service; check your connection.' };
   }
 }
 
@@ -197,7 +197,7 @@ export function sampleEmail(
     '',
     'Please let me know how to receive the samples. Thank you!',
   ].join('\n');
-  return { subject: `Sample request — Pretty Plastic ${product.name}`, body };
+  return { subject: `Sample request; Pretty Plastic ${product.name}`, body };
 }
 
 export function quoteEmail(
@@ -230,5 +230,5 @@ export function quoteEmail(
     '',
     'Thank you!',
   ].join('\n');
-  return { subject: `Quote request — Pretty Plastic ${product.name}`, body };
+  return { subject: `Quote request; Pretty Plastic ${product.name}`, body };
 }

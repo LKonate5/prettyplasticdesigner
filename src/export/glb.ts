@@ -76,7 +76,7 @@ export function buildGlb(mesh: WallMesh): ArrayBuffer {
   }
 
   const gltf = {
-    asset: { version: '2.0', generator: 'Pretty Plastic Facade Designer' },
+    asset: { version: '2.0', generator: 'Pretty Plastic Façade Designer' },
     scene: 0,
     scenes: [{ nodes: [0] }],
     nodes: [{ name: 'PrettyPlasticWall', mesh: 0 }],

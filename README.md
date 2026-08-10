@@ -1,4 +1,4 @@
-# Pretty Plastic Facade Designer
+# Pretty Plastic Façade Designer
 
 A self-contained web tool for designing walls of Pretty Plastic recycled-PVC
 cladding tiles. Pick a product, set the wall size (in metres or rows×columns),
@@ -70,7 +70,7 @@ Pages, or even a plain web-server folder. The current live deployment is:
   <iframe
     id="pp-designer"
     src="https://prettyplasticdesigner.vercel.app/"
-    title="Pretty Plastic Facade Designer"
+    title="Pretty Plastic Façade Designer"
     loading="lazy"
     allow="clipboard-write"
     style="width:100%; height:820px; border:0; display:block;"
@@ -106,7 +106,7 @@ Code Injection → Footer**.
 <iframe
   id="pp-designer"
   src="https://prettyplasticdesigner.vercel.app/"
-  title="Pretty Plastic Facade Designer"
+  title="Pretty Plastic Façade Designer"
   loading="lazy"
   allow="clipboard-write"
   style="width:100%; height:820px; border:0; display:block;"

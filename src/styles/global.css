@@ -329,7 +329,10 @@ input[type='checkbox'] {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  cursor: crosshair;
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cg stroke='%23000000' stroke-width='3' stroke-linecap='round'%3E%3Cline x1='15' y1='2' x2='15' y2='12'/%3E%3Cline x1='15' y1='18' x2='15' y2='28'/%3E%3Cline x1='2' y1='15' x2='12' y2='15'/%3E%3Cline x1='18' y1='15' x2='28' y2='15'/%3E%3C/g%3E%3Cg stroke='%23ffffff' stroke-width='1' stroke-linecap='round'%3E%3Cline x1='15' y1='2' x2='15' y2='12'/%3E%3Cline x1='15' y1='18' x2='15' y2='28'/%3E%3Cline x1='2' y1='15' x2='12' y2='15'/%3E%3Cline x1='18' y1='15' x2='28' y2='15'/%3E%3C/g%3E%3C/svg%3E")
+    15 15,
+    crosshair;
 }
 
 .rotate-margin-hit {

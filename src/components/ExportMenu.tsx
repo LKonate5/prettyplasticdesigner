@@ -29,10 +29,10 @@ const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'jpeg', label: 'JPEG image', note: 'Smaller file, white background' },
   { id: 'svg', label: 'SVG vector', note: 'True-mm scalable vector' },
   { id: 'seamless', label: 'Seamless texture (PNG)', note: 'Tileable repeat for 3D / render tools' },
-  { id: 'dxf', label: 'DXF (2D CAD)', note: 'AutoCAD · Revit · SketchUp — mm, layer per colour' },
+  { id: 'dxf', label: 'DXF (2D CAD)', note: 'AutoCAD · Revit · SketchUp; mm, layer per colour' },
   { id: 'pdf', label: 'PDF spec sheet', note: 'Render + tile schedule for quoting' },
-  { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours — SketchUp · Blender · 3D viewers' },
-  { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL — universal 3D interchange' },
+  { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours; SketchUp · Blender · 3D viewers' },
+  { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL; universal 3D interchange' },
 ];
 
 // The only export that isn't generated from the design: Pretty Plastic's own
@@ -82,7 +82,7 @@ export function ExportMenu({
         {
           id: 'cad',
           label: CAD_LABEL,
-          note: `${cadPack.files} real drawings — DWG details, dimensions, SKP/STL/IFC (${formatMb(cadPack.bytes)})`,
+          note: `${cadPack.files} real drawings; DWG details, dimensions, SKP/STL/IFC (${formatMb(cadPack.bytes)})`,
         },
       ]
     : FORMATS;
@@ -234,7 +234,7 @@ export function ExportMenu({
             </button>
           ))}
           <p className="note">
-            Your WALL is exported as GLB/OBJ for 3D and DXF for 2D — a browser can’t write .skp or
+            Your WALL is exported as GLB/OBJ for 3D and DXF for 2D; a browser can’t write .skp or
             .rvt, and both of those import cleanly. For the TILE itself, the CAD pack carries Pretty
             Plastic’s own SketchUp, STL, IFC and DWG files.
           </p>

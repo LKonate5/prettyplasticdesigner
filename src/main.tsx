@@ -5,6 +5,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { startAutoHeight } from './embed/autoHeight';
 import { loadTextures } from './render/textures';
 import type { TextureMap } from './render/textures';
+import '@fontsource/work-sans/400.css';
+import '@fontsource/work-sans/500.css';
+import '@fontsource/work-sans/600.css';
+import '@fontsource/work-sans/700.css';
 import './styles/theme.css';
 import './styles/global.css';
 

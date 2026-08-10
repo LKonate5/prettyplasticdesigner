@@ -13,9 +13,9 @@ export function drawLegend(ctx: CanvasRenderingContext2D, schedule: Schedule, px
   const margin = Math.round(fs * 1.2);
 
   const title = `Tile schedule · ${schedule.totalTiles} · ${schedule.areaM2.toFixed(1)} m²`;
-  ctx.font = `600 ${fs}px Helvetica, Arial, sans-serif`;
+  ctx.font = `600 ${fs}px 'Work Sans', Helvetica, Arial, sans-serif`;
   let boxW = ctx.measureText(title).width;
-  ctx.font = `${fs}px Helvetica, Arial, sans-serif`;
+  ctx.font = `${fs}px 'Work Sans', Helvetica, Arial, sans-serif`;
   for (const r of schedule.rows) {
     const line = `${r.material.name}   ${r.count} · ${r.pct.toFixed(0)}%`;
     boxW = Math.max(boxW, sw + fs * 0.6 + ctx.measureText(line).width);
@@ -30,12 +30,12 @@ export function drawLegend(ctx: CanvasRenderingContext2D, schedule: Schedule, px
   // title
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
-  ctx.font = `600 ${fs}px Helvetica, Arial, sans-serif`;
+  ctx.font = `600 ${fs}px 'Work Sans', Helvetica, Arial, sans-serif`;
   let y = margin + pad + rowH / 2;
   ctx.fillText(title, margin + pad, y);
 
   // rows
-  ctx.font = `${fs}px Helvetica, Arial, sans-serif`;
+  ctx.font = `${fs}px 'Work Sans', Helvetica, Arial, sans-serif`;
   for (const r of schedule.rows) {
     y += rowH;
     const x = margin + pad;

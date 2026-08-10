@@ -8,7 +8,7 @@ import type { WallMesh } from './mesh';
  */
 export function buildObj(mesh: WallMesh, mtlFilename: string): { obj: string; mtl: string } {
   const objLines: string[] = [
-    '# Pretty Plastic Facade Designer — wall export (mm, Y-up)',
+    '# Pretty Plastic Façade Designer; wall export (mm, Y-up)',
     `mtllib ${mtlFilename}`,
     'o PrettyPlasticWall',
   ];
