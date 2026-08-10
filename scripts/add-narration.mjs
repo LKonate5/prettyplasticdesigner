@@ -43,7 +43,7 @@ const NAME = String(flag('name', 'facade-designer-v2'));
 // (library voices like GPTk4QbvF7snDhImF5UF need a paid plan for API access).
 const VOICE_ID = String(flag('voice', 'Xb7hH8MSUJpSbSDYk0k2'));
 const MODEL_ID = String(flag('model', 'eleven_multilingual_v2'));
-const BED_DB = Number(flag('bed-db', -28));
+const BED_DB = Number(flag('bed-db', -20));
 const OUT_NAME = String(flag('out', `${NAME}-narrated.mp4`));
 const KEEP_TEMP = Boolean(flag('keep-temp', false));
 
@@ -134,10 +134,11 @@ const narrationWav = path.join(RAW_DIR, 'narration.wav');
 // ── ambient bed: a soft, constant piano chord, synthesized locally (no
 // licensing) — a held C6/9 voicing (C E G A C), harmonic-rich for a piano-ish
 // timbre. Every voice sustains at a fixed level for the whole clip (only the
-// overall fade in/out below moves) — no retriggering, no rhythm. Very quiet
-// by design (see BED_DB below): a held chord reads as more present than a
-// pluck at the same level, since there's no silence between notes for it to
-// recede into, so it needs to sit lower to stay in the background.
+// overall fade in/out below moves) — no retriggering, no rhythm. Calm and
+// soft by design (see BED_DB below), but still audible — a held chord reads
+// as more present than a pluck at the same level, since there's no silence
+// between notes for it to recede into, so it still sits well under the
+// narration even at this level.
 const bedWav = path.join(RAW_DIR, 'bed.wav');
 {
   const d = Math.max(videoDuration, 3);
