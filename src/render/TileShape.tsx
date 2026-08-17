@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { BT_H, BT_W } from '../core/layout/basicThird';
 import type { Material, Pt, Tile, TileRotation } from '../core/types';
 
 const fmt = (n: number): string => {
@@ -53,12 +54,12 @@ interface TileShapeProps {
  * clipPath, so overlays (facets, bands, photos) are cut with the tile.
  *
  * Second High may rotate as a physical design choice, so its photo and facet
- * transform together. First One keeps its hanging nose to the north. Basic Third always
- * keeps its true hex colour (no borrowed photo — a borrowed marble crop can't
- * match its defined palette swatches) plus a subtle top-to-bottom
- * #pp-marble-fade tint and its 3 vertical relief bands (#pp-bands), since that
- * grooved 3-slat profile is the product's actual physical shape. Without a
- * photo: hex fill + the procedural facet/band overlays.
+ * transform together. First One keeps its hanging nose to the north. Basic
+ * Third's tile is a plain rect, so its photo (when available) is drawn as a
+ * simple axis-aligned crop — no clip path needed. Without a photo, any
+ * product falls back to its flat hex fill; Second High adds #pp-facet and
+ * Basic Third adds a subtle #pp-marble-fade tint plus its 3 vertical relief
+ * bands (#pp-bands) standing in for the grooved 3-slat profile.
  */
 export const TileShape = memo(function TileShape({
   tile,
@@ -108,6 +109,19 @@ export const TileShape = memo(function TileShape({
         )}
       </g>
     );
+  } else if (texUrl && productId === 'basic-third') {
+    content = texId ? (
+      <use href={texHref ?? ''} x={x} y={y} />
+    ) : (
+      <image
+        href={texUrl}
+        x={x}
+        y={y}
+        width={BT_W}
+        height={BT_H}
+        preserveAspectRatio="xMidYMid slice"
+      />
+    );
   } else {
     content = (
       <polygon
@@ -137,7 +151,7 @@ export const TileShape = memo(function TileShape({
         />
       )}
       {second && !texUrl && <use href="#pp-facet" transform={`translate(${fmt(x)} ${fmt(y)})`} />}
-      {productId === 'basic-third' && (
+      {productId === 'basic-third' && !texUrl && (
         <>
           <rect
             x={x}

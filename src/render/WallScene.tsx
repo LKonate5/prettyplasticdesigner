@@ -1,3 +1,4 @@
+import { BT_H, BT_W } from '../core/layout/basicThird';
 import type { Cell, Layout, ProductSpec } from '../core/types';
 import { materialAt } from '../data/palette';
 import { SceneDefs } from './defs';
@@ -84,7 +85,7 @@ export function WallScene({
         tile={tile}
         material={material}
         texUrl={texUrl}
-        texId={texUrl && product.id !== 'basic-third' ? textureIdFor(texUrl) : undefined}
+        texId={texUrl ? textureIdFor(texUrl) : undefined}
         texBorrowed={resolved ? !resolved.native : false}
         toneJitter={toneJitterFor(seed, tile.patternRow, tile.patternCol)}
         productId={product.id}
@@ -112,6 +113,15 @@ export function WallScene({
                 href={url}
                 width={FO_IMG_W}
                 height={FO_IMG_H}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            ) : product.id === 'basic-third' ? (
+              <image
+                key={id}
+                id={id}
+                href={url}
+                width={BT_W}
+                height={BT_H}
                 preserveAspectRatio="xMidYMid slice"
               />
             ) : (

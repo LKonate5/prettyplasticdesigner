@@ -16,8 +16,6 @@ export const STR = {
   advancedMetres: 'Set by width & height instead',
   renderedPreviewNote:
     'Note: this product is shown as a rendered preview ; these are generated images, not photos of the actual tiles. The real tiles follow the same colours and format.',
-  basicThirdPreviewNote:
-    'Basic Third is currently shown as a rendered preview. Photography of the final Basic Third tiles will be integrated as soon as it is available.',
   borrowedPhotoNote:
     'Note: Basic Third does not yet have its own tile photos, so this preview borrows First One photography in matching colours and shades ; both are made from the same recycled material. The real Basic Third tiles will show their own three-band relief pattern.',
   bond: 'Bond',

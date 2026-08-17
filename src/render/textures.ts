@@ -27,10 +27,12 @@ export const textureKey = (productId: ProductId, materialId: MaterialId): string
  * product's photos in the same colour/shade, so the preview shows the real
  * marble/flame finish instead of a flat swatch. Remove an entry here once that
  * product gets its own photos in the manifest (native photos always win).
+ *
+ * Currently empty — Basic Third's own photography landed and its entry was
+ * removed. Kept as the extensibility point for the next product that ships
+ * without its own photos yet.
  */
-const PHOTO_FALLBACK: Partial<Record<ProductId, ProductId>> = {
-  'basic-third': 'first-one',
-};
+const PHOTO_FALLBACK: Partial<Record<ProductId, ProductId>> = {};
 
 export interface ResolvedTexture {
   urls: readonly string[];

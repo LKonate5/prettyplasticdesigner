@@ -122,6 +122,15 @@ describe('WallScene markup', () => {
       const b = render('second-high', 8, 8, { textures, seed: 2, solid: 'grey-dark' });
       expect(a).not.toEqual(b); // same colours, different photography
     });
+
+    it('Basic Third draws its own photo via a hoisted <use> when the manifest has one', () => {
+      const svg = render('basic-third', 5, 4, {
+        textures: fakeTextures('basic-third', 3),
+        solid: 'grey-dark',
+      });
+      expect(svg).toMatch(/href="#pp-tex-\d+"/);
+      expect(svg).not.toContain('href="#pp-bands"'); // procedural overlay suppressed once a photo exists
+    });
   });
 
   it('no NaN or undefined leaks into coordinates', () => {

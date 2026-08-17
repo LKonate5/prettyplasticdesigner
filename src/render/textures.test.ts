@@ -83,13 +83,19 @@ describe('loadTextures', () => {
 });
 
 describe('resolveTexture', () => {
-  it('marks Basic Third texture fallbacks as borrowed First One photos', () => {
-    const textures = new Map([['first-one/ochre-light', ['/textures/first-one/ochre-light-01.jpg']]]);
+  it('returns native photos when the product has its own manifest entry', () => {
+    const textures = new Map([['basic-third/ochre-light', ['/textures/basic-third/ochre-light-01.jpg']]]);
 
     expect(resolveTexture(textures, 'basic-third', 'ochre-light')).toEqual({
-      urls: ['/textures/first-one/ochre-light-01.jpg'],
-      native: false,
-      key: 'first-one/ochre-light',
+      urls: ['/textures/basic-third/ochre-light-01.jpg'],
+      native: true,
+      key: 'basic-third/ochre-light',
     });
+  });
+
+  it('returns null when a product has no photos and no fallback is configured', () => {
+    const textures = new Map([['first-one/ochre-light', ['/textures/first-one/ochre-light-01.jpg']]]);
+
+    expect(resolveTexture(textures, 'basic-third', 'ochre-light')).toBeNull();
   });
 });

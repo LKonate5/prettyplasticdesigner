@@ -104,13 +104,8 @@ export function ControlPanel({
         value={design.productId}
         onChange={(productId) => dispatch({ type: 'SET_PRODUCT', productId })}
       />
-      {product.id === 'basic-third' && <p className="note">{STR.basicThirdPreviewNote}</p>}
       {photoStatus === 'none' && <p className="note">{STR.renderedPreviewNote}</p>}
-      {/* Basic Third has its own rendered-preview note above; don't also show
-          the sibling-photo fallback disclaimer. */}
-      {photoStatus === 'borrowed' && product.id !== 'basic-third' && (
-        <p className="note">{STR.borrowedPhotoNote}</p>
-      )}
+      {photoStatus === 'borrowed' && <p className="note">{STR.borrowedPhotoNote}</p>}
 
       <DimensionInputs
         product={product}
