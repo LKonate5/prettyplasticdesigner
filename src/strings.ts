@@ -8,7 +8,6 @@ export const STR = {
 
   product: 'Product',
   rows: 'Rows',
-  physicalRows: 'Rows (physical courses)',
   columns: 'Columns',
   wallSize: 'Wall size',
   widthM: 'Width (m)',

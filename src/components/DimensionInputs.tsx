@@ -66,7 +66,7 @@ export function DimensionInputs({
       <h2>{STR.wallSize}</h2>
       <div className="row">
         <div className="field">
-          <label htmlFor="rows">{product.id === 'first-one' ? STR.physicalRows : STR.rows}</label>
+          <label htmlFor="rows">{STR.rows}</label>
           <DraftNumberInput
             id="rows"
             min={1}
