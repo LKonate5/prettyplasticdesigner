@@ -1,10 +1,12 @@
-import type { ColourId, Material, MaterialId, ShadeId } from '../core/types';
+import type { ColourId, Material, MaterialId, ProductId, ShadeId } from '../core/types';
 
 /**
- * The single shared palette: 4 colours × 3 shades = 12 materials, identical
- * for all three products (confirmed on prettyplastic.nl/products).
+ * The shared palette: 5 colours × 3 shades = 15 materials. Blue is currently
+ * First One only (no photography yet for the other two products) — see
+ * COLOUR_PRODUCT_LOCK below, which every product-aware caller must go
+ * through instead of MATERIALS/MATERIAL_IDS directly.
  *
- * hex values are placeholders until the real tile texture PNGs arrive.
+ * hex values are sampled from the real tile texture photos.
  * To use real textures, drop PNGs at:
  *   public/textures/{productId}/{colour}-{shade}.png   e.g. textures/first-one/ochre-light.png
  * — no code changes needed; the app probes for them at startup.
@@ -28,21 +30,51 @@ function m(colour: ColourId, shade: ShadeId, hex: string, aci: number): Material
 }
 
 export const MATERIALS: readonly Material[] = [
-  m('ochre', 'light', '#D9B36C', 41),
-  m('ochre', 'medium', '#C1913F', 40),
-  m('ochre', 'dark', '#9C6F23', 44),
-  m('terracotta', 'light', '#C97B5A', 31),
-  m('terracotta', 'medium', '#A85438', 30),
-  m('terracotta', 'dark', '#7E3B26', 34),
-  m('green', 'light', '#8FA48B', 81),
-  m('green', 'medium', '#64805F', 84),
-  m('green', 'dark', '#42573F', 86),
-  m('grey', 'light', '#B9BCBB', 254),
-  m('grey', 'medium', '#8B8F8E', 8),
-  m('grey', 'dark', '#565A59', 250),
+  m('ochre', 'light', '#98896E', 41),
+  m('ochre', 'medium', '#A38A62', 40),
+  m('ochre', 'dark', '#B18754', 44),
+  m('terracotta', 'light', '#948079', 31),
+  m('terracotta', 'medium', '#9C6F65', 30),
+  m('terracotta', 'dark', '#995F53', 34),
+  m('green', 'light', '#8B8975', 81),
+  m('green', 'medium', '#7B7D5B', 84),
+  m('green', 'dark', '#6E744E', 86),
+  m('grey', 'light', '#928E89', 254),
+  m('grey', 'medium', '#575757', 8),
+  m('grey', 'dark', '#38383C', 250),
+  // Blue: new colour, First One only (see COLOUR_PRODUCT_LOCK) — appended
+  // rather than inserted so existing share links' material indices (0–11)
+  // stay stable.
+  m('blue', 'light', '#72869E', 150),
+  m('blue', 'medium', '#5485B1', 160),
+  m('blue', 'dark', '#3A5B79', 170),
 ];
 
 export const MATERIAL_IDS: readonly MaterialId[] = MATERIALS.map((mat) => mat.id);
+
+/**
+ * Colours restricted to one product because only that product has real
+ * photography for them yet (e.g. blue → First One, added 2026-08-27). Every
+ * product-aware caller (palette UI, brush, pattern generation defaults, share
+ * links) must go through the helpers below rather than MATERIALS/MATERIAL_IDS
+ * directly. Remove an entry here once that colour's photos land elsewhere.
+ */
+const COLOUR_PRODUCT_LOCK: Partial<Record<ColourId, ProductId>> = {
+  blue: 'first-one',
+};
+
+export function isColourAllowedFor(colour: ColourId, productId: ProductId): boolean {
+  const lock = COLOUR_PRODUCT_LOCK[colour];
+  return !lock || lock === productId;
+}
+
+export function materialsFor(productId: ProductId): readonly Material[] {
+  return MATERIALS.filter((mat) => isColourAllowedFor(mat.colour, productId));
+}
+
+export function materialIdsFor(productId: ProductId): readonly MaterialId[] {
+  return materialsFor(productId).map((mat) => mat.id);
+}
 
 const INDEX_BY_ID = new Map<MaterialId, number>(MATERIALS.map((mat, i) => [mat.id, i]));
 

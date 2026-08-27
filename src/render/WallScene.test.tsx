@@ -27,12 +27,12 @@ function render(
   // how that material's photos are spread across a whole wall.
   const pattern = opts.solid
     ? {
-        ...defaultPattern(seed),
+        ...defaultPattern(seed, productId),
         type: 'solid' as const,
         solidMaterial: opts.solid,
         toneVariation: 0, // otherwise shades drift and it isn't one material any more
       }
-    : defaultPattern(seed);
+    : defaultPattern(seed, productId);
   const cells = generatePattern(pattern, layout);
   return renderToStaticMarkup(
     <WallScene
@@ -92,7 +92,7 @@ describe('WallScene markup', () => {
   it('only Second High can carry a selected-tile rotation', () => {
     const product = PRODUCTS['second-high'];
     const layout = computeLayout(product, 2, 2, { exposure: 450, bond: 'staggered' });
-    const cells = generatePattern(defaultPattern(1), layout);
+    const cells = generatePattern(defaultPattern(1, product.id), layout);
     cells[0] = { ...cells[0], rotation: 90 };
     const svg = renderToStaticMarkup(
       <WallScene layout={layout} cells={cells} product={product} textures={new Map()} seed={1} />,

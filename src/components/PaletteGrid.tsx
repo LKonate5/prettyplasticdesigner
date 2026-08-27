@@ -1,13 +1,14 @@
 import { Fragment } from 'react';
-import type { ColourId, MaterialId, ShadeId } from '../core/types';
-import { MATERIALS } from '../data/palette';
+import type { ColourId, MaterialId, ProductId, ShadeId } from '../core/types';
+import { isColourAllowedFor, MATERIALS } from '../data/palette';
 import { STR } from '../strings';
 
-const COLOURS: { id: ColourId; label: string }[] = [
+const ALL_COLOURS: { id: ColourId; label: string }[] = [
   { id: 'ochre', label: STR.colourOchre },
   { id: 'terracotta', label: STR.colourTerracotta },
   { id: 'green', label: STR.colourGreen },
   { id: 'grey', label: STR.colourGrey },
+  { id: 'blue', label: STR.colourBlue },
 ];
 
 const SHADES: { id: ShadeId; label: string }[] = [
@@ -26,18 +27,21 @@ const materialFor = (colour: ColourId, shade: ShadeId) =>
  * the corner dot toggles whether that material is in the auto-generated mix.
  */
 export function PaletteGrid({
+  productId,
   brush,
   allowed,
   onBrush,
   onToggleAllowed,
   onAllowAll,
 }: {
+  productId: ProductId;
   brush: MaterialId;
   allowed: MaterialId[];
   onBrush: (id: MaterialId) => void;
   onToggleAllowed: (id: MaterialId) => void;
   onAllowAll: () => void;
 }) {
+  const COLOURS = ALL_COLOURS.filter((c) => isColourAllowedFor(c.id, productId));
   const allowedSet = new Set(allowed);
   const brushName = MATERIALS.find((m) => m.id === brush)?.name ?? '';
 

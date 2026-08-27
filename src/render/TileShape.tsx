@@ -24,14 +24,16 @@ const LIP_FILL = 'rgba(255,255,255,0.16)';
 // stamped repeat, small enough that it never fights the photo's own lighting.
 const TONE_JITTER = 0.04;
 
-// First One photo placement (photos are ~1785×2400: the full 304×400 mm
-// physical diamond incl. its hidden top lap, on a backdrop). The image is
-// scaled slightly past the visible rhombus and bottom-anchored, then clipped
-// by #pp-diamond so the photo always covers the tile with no backdrop slivers.
+// First One photo placement (photos are 425×425 px, square, full-bleed: the
+// visible ~304 × 296.4 mm rhombus is inscribed touching all 4 canvas edge
+// midpoints, no hidden lap/backdrop baked in). The image box matches that
+// square aspect exactly, is scaled slightly past the visible rhombus and
+// centered, then clipped by #pp-diamond so the photo always covers the tile
+// with no backdrop slivers.
 export const SECOND_HIGH_IMG_SIZE = 294;
 export const FO_IMG_W = 316; // 304 mm × ~4% overscan
-export const FO_IMG_H = FO_IMG_W * (2400 / 1785);
-export const FO_IMG_BOTTOM = 154; // rhombus bottom vertex ≈ +148.2, plus a little bleed
+export const FO_IMG_H = FO_IMG_W; // square source — box matches aspect exactly, zero crop
+export const FO_IMG_BOTTOM = FO_IMG_H / 2; // vertically centered — no top "hanger nub" to offset for
 
 interface TileShapeProps {
   tile: Tile;

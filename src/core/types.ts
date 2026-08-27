@@ -3,9 +3,9 @@
  * y-down, with the wall's top-left corner at (0, 0).
  */
 
-export type ColourId = 'ochre' | 'terracotta' | 'green' | 'grey';
+export type ColourId = 'ochre' | 'terracotta' | 'green' | 'grey' | 'blue';
 export type ShadeId = 'light' | 'medium' | 'dark';
-export type MaterialId = `${ColourId}-${ShadeId}`; // exactly 12 combinations
+export type MaterialId = `${ColourId}-${ShadeId}`; // exactly 15 combinations
 
 export interface Material {
   id: MaterialId;

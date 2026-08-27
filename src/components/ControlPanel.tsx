@@ -4,7 +4,7 @@ import type { Action } from '../core/state/actions';
 import type { AppState } from '../core/state/reducer';
 import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
-import { MATERIAL_IDS } from '../data/palette';
+import { materialIdsFor } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { productPhotoStatus } from '../render/textures';
@@ -125,12 +125,16 @@ export function ControlPanel({
       />
 
       <PaletteGrid
+        productId={design.productId}
         brush={state.ui.brush}
         allowed={design.pattern.allowedMaterials}
         onBrush={(brush) => dispatch({ type: 'SET_BRUSH', brush })}
         onToggleAllowed={toggleAllowed}
         onAllowAll={() =>
-          dispatch({ type: 'SET_PATTERN', pattern: { allowedMaterials: [...MATERIAL_IDS] } })
+          dispatch({
+            type: 'SET_PATTERN',
+            pattern: { allowedMaterials: [...materialIdsFor(design.productId)] },
+          })
         }
       />
 

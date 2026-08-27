@@ -10,7 +10,7 @@ import { buildDxf } from './writer';
 function dxfFor(productId: ProductId, rows = 6, cols = 5) {
   const product = PRODUCTS[productId];
   const layout = computeLayout(product, rows, cols, { exposure: 450, bond: 'staggered' });
-  const cells = generatePattern(defaultPattern(3), layout);
+  const cells = generatePattern(defaultPattern(3, productId), layout);
   return { product, layout, cells, dxf: buildDxf(product, layout, cells) };
 }
 

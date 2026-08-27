@@ -11,7 +11,7 @@ import { buildObj } from './obj';
 function meshFor(productId: ProductId, rows = 5, cols = 4) {
   const product = PRODUCTS[productId];
   const layout = computeLayout(product, rows, cols, { exposure: 450, bond: 'staggered' });
-  const cells = generatePattern(defaultPattern(2), layout);
+  const cells = generatePattern(defaultPattern(2, productId), layout);
   return { product, layout, cells, mesh: buildWallMesh(product, layout, cells) };
 }
 

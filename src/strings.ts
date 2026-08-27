@@ -48,6 +48,7 @@ export const STR = {
   colourTerracotta: 'Terracotta',
   colourGreen: 'Green',
   colourGrey: 'Grey',
+  colourBlue: 'Blue',
   paletteHint:
     'Click a colour to paint with it. The dot in the corner includes or excludes it from the auto-generated mix.',
   rotation: 'Tile rotation',

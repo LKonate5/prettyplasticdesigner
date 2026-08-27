@@ -2,7 +2,7 @@ import { computeLayout } from '../core/layout';
 import { generatePattern } from '../core/pattern/generators';
 import { DEFAULT_WASTE, WASTE_MAX, type DesignState } from '../core/state/reducer';
 import type { Cell, MaterialId, PatternType, ProductId } from '../core/types';
-import { materialAt, materialIndex, MATERIAL_IDS } from '../data/palette';
+import { isColourAllowedFor, materialAt, materialIndex, MATERIALS, MATERIAL_IDS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
 
 /**
@@ -102,6 +102,15 @@ export function decodeDesign(str: string): DesignState | null {
     const packed: Packed = JSON.parse(decodeURIComponent(escape(atob(fromUrlSafe(str)))));
     if (!PRODUCT_IDS.includes(packed.p)) return null;
     const asMaterial = (i: number): MaterialId => materialAt(i).id;
+    // A share link is untrusted input — it could carry material indices for a
+    // colour locked to a different product (see COLOUR_PRODUCT_LOCK in
+    // data/palette.ts, e.g. blue is First One only). Filter those out here,
+    // the same way SET_PRODUCT sanitises them for the interactive path.
+    const allowedForColour = (id: MaterialId): boolean => {
+      const colour = MATERIALS.find((mat) => mat.id === id)?.colour;
+      return !colour || isColourAllowedFor(colour, packed.p);
+    };
+    const solidMaterial = asMaterial(packed.sm);
     const design: DesignState = {
       productId: packed.p,
       rows: packed.r,
@@ -110,11 +119,11 @@ export function decodeDesign(str: string): DesignState | null {
       pattern: {
         type: packed.t,
         seed: packed.s >>> 0,
-        allowedMaterials: (packed.am?.length ? packed.am : MATERIAL_IDS.map((_, i) => i)).map(
-          asMaterial,
-        ),
+        allowedMaterials: (packed.am?.length ? packed.am : MATERIAL_IDS.map((_, i) => i))
+          .map(asMaterial)
+          .filter(allowedForColour),
         toneVariation: packed.tv,
-        solidMaterial: asMaterial(packed.sm),
+        solidMaterial: allowedForColour(solidMaterial) ? solidMaterial : 'grey-medium',
         gradient: { direction: gradientDirection(packed) },
         stripes: { direction: packed.sdir, width: packed.sw },
       },
@@ -126,6 +135,7 @@ export function decodeDesign(str: string): DesignState | null {
     design.cells = baselineCells(design);
     for (const [i, material, rotation] of packed.o ?? []) {
       if (!design.cells[i]) continue;
+      if (!allowedForColour(materialAt(material).id)) continue;
       design.cells[i] = packed.p === 'second-high' && isRotation(rotation)
         ? { material, rotation }
         : { material };

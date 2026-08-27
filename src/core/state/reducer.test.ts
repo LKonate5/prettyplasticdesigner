@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MATERIALS } from '../../data/palette';
 import type { AppState } from './reducer';
 import { appReducer, initialAppState } from './reducer';
 import type { Action } from './actions';
@@ -38,21 +39,28 @@ describe('app reducer + history', () => {
 
   it('redo works and is cleared by a new edit', () => {
     let s = initialAppState(7);
+    // Pick a material guaranteed to actually change the cell — PAINT_CELL is a
+    // no-op when the target already has that material, which a hardcoded
+    // index can't guarantee once the seeded pattern draws from a differently
+    // sized palette (e.g. after a colour is added/removed).
+    const otherMaterial = (index: number) => (s.present.cells[index].material + 1) % MATERIALS.length;
+    const paint0 = otherMaterial(0);
     s = run(
       s,
       { type: 'STROKE_START' },
-      { type: 'PAINT_CELL', cellIndex: 0, material: 5 },
+      { type: 'PAINT_CELL', cellIndex: 0, material: paint0 },
       { type: 'STROKE_END' },
       { type: 'UNDO' },
     );
     expect(s.future.length).toBe(1);
     s = run(s, { type: 'REDO' });
-    expect(s.present.cells[0].material).toBe(5);
+    expect(s.present.cells[0].material).toBe(paint0);
+    s = run(s, { type: 'UNDO' });
+    const paint1 = otherMaterial(1); // cell 1 untouched so far, still its original material
     s = run(
       s,
-      { type: 'UNDO' },
       { type: 'STROKE_START' },
-      { type: 'PAINT_CELL', cellIndex: 1, material: 4 },
+      { type: 'PAINT_CELL', cellIndex: 1, material: paint1 },
       { type: 'STROKE_END' },
     );
     expect(s.future.length).toBe(0);

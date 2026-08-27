@@ -1,4 +1,4 @@
-import { MATERIAL_IDS } from '../../data/palette';
+import { isColourAllowedFor, materialIdsFor, MATERIALS } from '../../data/palette';
 import { DEFAULT_OPTIONS, EXPOSURE_MAX, EXPOSURE_MIN, PRODUCTS } from '../../data/products';
 import { computeLayout } from '../layout';
 import { generatePattern } from '../pattern/generators';
@@ -69,11 +69,11 @@ export function snapRows(productId: ProductId, options: ProductOptions, rows: nu
   return Math.max(2, rows + 1);
 }
 
-export function defaultPattern(seed: number): PatternConfig {
+export function defaultPattern(seed: number, productId: ProductId): PatternConfig {
   return {
     type: 'random',
     seed,
-    allowedMaterials: [...MATERIAL_IDS],
+    allowedMaterials: [...materialIdsFor(productId)],
     toneVariation: 0.35,
     solidMaterial: 'grey-medium',
     // horizontal bands, i.e. the colour fades down the wall — sky to ground is
@@ -81,6 +81,33 @@ export function defaultPattern(seed: number): PatternConfig {
     gradient: { direction: 'horizontal' },
     stripes: { direction: 'horizontal', width: 2 },
   };
+}
+
+/**
+ * Drop materials whose colour is locked to a different product (see
+ * COLOUR_PRODUCT_LOCK in data/palette.ts), and repair solidMaterial, when
+ * carrying a pattern across a SET_PRODUCT switch.
+ */
+function sanitizePatternForProduct(pattern: PatternConfig, productId: ProductId): PatternConfig {
+  const allowedForProduct = materialIdsFor(productId);
+  const allowedSet = new Set(allowedForProduct);
+  const allowedMaterials = pattern.allowedMaterials.filter((id) => allowedSet.has(id));
+  return {
+    ...pattern,
+    allowedMaterials: allowedMaterials.length > 0 ? allowedMaterials : [...allowedForProduct],
+    solidMaterial: allowedSet.has(pattern.solidMaterial) ? pattern.solidMaterial : allowedForProduct[0],
+  };
+}
+
+/**
+ * Reset the paint brush if its colour is locked out of the new product —
+ * otherwise a stale e.g. blue brush from First One could paint blue onto a
+ * product whose palette no longer offers it (WallPreview resolves ui.brush
+ * fresh at click time, independent of `pattern`).
+ */
+function sanitizeBrushForProduct(brush: MaterialId, productId: ProductId): MaterialId {
+  const colour = MATERIALS.find((mat) => mat.id === brush)?.colour;
+  return colour && isColourAllowedFor(colour, productId) ? brush : materialIdsFor(productId)[0];
 }
 
 function buildDesign(
@@ -108,7 +135,7 @@ function buildDesign(
 
 export function initialDesign(productId: ProductId, seed: number): DesignState {
   const { rows, cols } = DEFAULT_GRID[productId];
-  const design = buildDesign(productId, rows, cols, { ...DEFAULT_OPTIONS }, defaultPattern(seed));
+  const design = buildDesign(productId, rows, cols, { ...DEFAULT_OPTIONS }, defaultPattern(seed, productId));
   if (!design) throw new Error('default grid exceeds tile cap'); // impossible by construction
   return design;
 }
@@ -169,11 +196,13 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'SET_PRODUCT': {
       if (action.productId === p.productId) return state;
       const { rows, cols } = DEFAULT_GRID[action.productId];
+      const pattern = sanitizePatternForProduct(p.pattern, action.productId);
       const next = commit(
         state,
-        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, p.pattern, p.wastePct),
+        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, pattern, p.wastePct),
       );
-      return { ...next, ui: { ...next.ui, selectedCell: null, rotationTool: null } };
+      const brush = sanitizeBrushForProduct(state.ui.brush, action.productId);
+      return { ...next, ui: { ...next.ui, brush, selectedCell: null, rotationTool: null } };
     }
 
     case 'SET_GRID': {
@@ -233,7 +262,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const { rows, cols } = DEFAULT_GRID[p.productId];
       return commit(
         state,
-        buildDesign(p.productId, rows, cols, { ...DEFAULT_OPTIONS }, defaultPattern(action.seed)),
+        buildDesign(p.productId, rows, cols, { ...DEFAULT_OPTIONS }, defaultPattern(action.seed, p.productId)),
       );
     }
 
