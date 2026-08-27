@@ -195,8 +195,6 @@ export function ControlPanel({
         requireLead={requireLead}
       />
 
-      <p className="note">{STR.regenNote}</p>
-
       {pendingLead && (
         <LeadCaptureModal
           formatLabel={pendingLead.label}

@@ -96,8 +96,6 @@ export const STR = {
   emailFallback: 'Could not send directly, so we opened your email app instead ; just hit send there.',
 
   capNotice: 'That size would exceed 5,000 tiles ; reduce rows or columns.',
-  regenNote:
-    'Size and pattern changes regenerate the design. Hand-painted tiles may be replaced. Using the Undo button restores your design pattern.',
 
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
