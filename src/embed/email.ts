@@ -4,24 +4,26 @@ import type { DesignState } from '../core/state/reducer';
 import type { MaterialId, ProductId, ProductSpec } from '../core/types';
 import { MATERIALS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
+import type { SceneInput } from '../export/svg';
 import { shareUrl } from './share';
 
 const m = (mm: number) => (mm / 1000).toFixed(2);
 
-/** Visitor details captured once per visit before their first export/email (see ExportMenu). */
+/** Visitor details captured once per tab before their first export/email (see ExportMenu). */
 export interface ExportLead {
   firstName: string;
   lastName: string;
   email: string;
   company: string;
   projectName?: string;
+  /** Façade area of the project — asked on every form, so Pretty Plastic knows its size. */
+  projectSizeM2: number;
   projectPhase?: string;
   quote?: QuoteRequestDetails;
   sample?: SampleRequestDetails;
 }
 
 export interface QuoteRequestDetails {
-  requestedAreaM2: number;
   productIds: ProductId[];
 }
 
@@ -50,6 +52,7 @@ function leadLines(lead: ExportLead): string[] {
   return [
     `From: ${lead.firstName} ${lead.lastName} ; ${lead.email} ; ${lead.company}`,
     lead.projectName ? `Project name: ${lead.projectName}` : '',
+    `Project size: ${lead.projectSizeM2} m²`,
     lead.projectPhase ? `Project phase: ${lead.projectPhase}` : '',
   ].filter((line) => line !== '');
 }
@@ -115,6 +118,32 @@ export function projectLines(
   ].filter((l) => l !== '');
 }
 
+/** An email attachment, base64-encoded for api/send-email.ts. */
+export interface EmailAttachment {
+  filename: string;
+  contentBase64: string;
+}
+
+/**
+ * Picture of the design to attach to an email. Best-effort: if rendering
+ * fails, the email still goes out with its design link.
+ */
+export async function designPhoto(
+  scene: SceneInput,
+  schedule: Schedule,
+): Promise<EmailAttachment | undefined> {
+  try {
+    const [{ renderEmailPhoto }, { baseName }] = await Promise.all([
+      import('../export/raster'),
+      import('../export/download'),
+    ]);
+    const name = baseName(scene.product.id, scene.layout.rows, scene.layout.cols);
+    return (await renderEmailPhoto(scene, schedule, `${name}.jpg`)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Open the visitor's email app with a pre-filled message to Pretty Plastic. */
 export function openMail(subject: string, body: string): void {
   const href = `mailto:${SALES_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -140,7 +169,7 @@ export interface SubmitEmailResult {
 export async function submitEmail(
   subject: string,
   text: string,
-  attachment?: { filename: string; contentBase64: string },
+  attachment?: EmailAttachment,
 ): Promise<SubmitEmailResult> {
   try {
     const res = await fetch(emailEndpoint(), {
@@ -215,7 +244,6 @@ export function quoteEmail(
     ...(quote
       ? [
           'Quote request details:',
-          `Requested area: ${quote.requestedAreaM2} m²`,
           `Products: ${productNames(quote.productIds)}`,
           '',
         ]

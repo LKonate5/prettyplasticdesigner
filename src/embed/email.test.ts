@@ -26,6 +26,7 @@ const lead: ExportLead = {
   email: 'ari@example.com',
   company: 'Facade Studio',
   projectName: 'Harbour House',
+  projectSizeM2: 120,
   projectPhase: 'Tender',
 };
 
@@ -33,6 +34,7 @@ describe('lead email content', () => {
   it('prefixes outgoing bodies with required contact and optional project details', () => {
     expect(withLead(lead, 'Body')).toContain('From: Ari Stone');
     expect(withLead(lead, 'Body')).toContain('Project name: Harbour House');
+    expect(withLead(lead, 'Body')).toContain('Project size: 120 m²');
     expect(withLead(lead, 'Body')).toContain('Project phase: Tender');
   });
 
@@ -43,13 +45,11 @@ describe('lead email content', () => {
     expect(body).toContain('Project phase: Tender');
   });
 
-  it('includes requested m2 and products in quote emails', () => {
+  it('includes the requested products in quote emails', () => {
     const { design, product, schedule, order } = fixtures();
     const { body } = quoteEmail(product, schedule, design, order, {
-      requestedAreaM2: 42,
       productIds: ['first-one', 'basic-third'],
     });
-    expect(body).toContain('Requested area: 42 m²');
     expect(body).toContain('Products: First One, Basic Third');
     expect(body).toContain('Design link: #d=');
   });

@@ -23,6 +23,7 @@ const stripRequestDetails = (lead: ExportLead): ExportLead => ({
   email: lead.email,
   company: lead.company,
   projectName: lead.projectName,
+  projectSizeM2: lead.projectSizeM2,
   projectPhase: lead.projectPhase,
 });
 
@@ -59,12 +60,15 @@ export function LeadCaptureModal({
   formatLabel,
   request,
   initialLead,
+  defaultSizeM2,
   onSubmit,
   onCancel,
 }: {
   formatLabel: string;
   request: LeadRequestContext;
   initialLead: ExportLead | null;
+  /** Prefills project size from the current wall until the visitor enters their own. */
+  defaultSizeM2: number;
   onSubmit: (lead: ExportLead, cacheLead: ExportLead) => void;
   onCancel: () => void;
 }) {
@@ -73,10 +77,10 @@ export function LeadCaptureModal({
   const [email, setEmail] = useState(initialLead?.email ?? '');
   const [company, setCompany] = useState(initialLead?.company ?? '');
   const [projectName, setProjectName] = useState(initialLead?.projectName ?? '');
-  const [projectPhase, setProjectPhase] = useState(initialLead?.projectPhase ?? '');
-  const [quoteArea, setQuoteArea] = useState(
-    request.quoteDefaults ? String(request.quoteDefaults.requestedAreaM2) : '',
+  const [projectSize, setProjectSize] = useState(
+    String(initialLead?.projectSizeM2 ?? defaultSizeM2),
   );
+  const [projectPhase, setProjectPhase] = useState(initialLead?.projectPhase ?? '');
   const [quoteProducts, setQuoteProducts] = useState<ProductId[]>(
     request.quoteDefaults?.productIds ?? [],
   );
@@ -103,15 +107,24 @@ export function LeadCaptureModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const projectSizeM2 = Number(projectSize);
     const lead: ExportLead = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
       company: company.trim(),
       projectName: projectName.trim() || undefined,
+      projectSizeM2,
       projectPhase: projectPhase || undefined,
     };
-    if (!lead.firstName || !lead.lastName || !lead.email || !lead.company) {
+    if (
+      !lead.firstName ||
+      !lead.lastName ||
+      !lead.email ||
+      !lead.company ||
+      !Number.isFinite(projectSizeM2) ||
+      projectSizeM2 <= 0
+    ) {
       setError(STR.exportLeadRequired);
       return;
     }
@@ -121,12 +134,11 @@ export function LeadCaptureModal({
     }
 
     if (request.mode === 'quote') {
-      const requestedAreaM2 = Number(quoteArea);
-      if (!Number.isFinite(requestedAreaM2) || requestedAreaM2 <= 0 || quoteProducts.length === 0) {
+      if (quoteProducts.length === 0) {
         setError(STR.quoteLeadRequired);
         return;
       }
-      lead.quote = { requestedAreaM2, productIds: quoteProducts };
+      lead.quote = { productIds: quoteProducts };
     }
 
     if (request.mode === 'sample') {
@@ -228,6 +240,17 @@ export function LeadCaptureModal({
           />
         </div>
         <div className="field">
+          <label htmlFor="lead-project-size">{STR.projectSizeM2}</label>
+          <input
+            id="lead-project-size"
+            type="number"
+            min={1}
+            step={1}
+            value={projectSize}
+            onChange={(e) => setProjectSize(e.target.value)}
+          />
+        </div>
+        <div className="field">
           <label htmlFor="lead-project-phase">{STR.projectPhase}</label>
           <select
             id="lead-project-phase"
@@ -246,17 +269,6 @@ export function LeadCaptureModal({
         {request.mode === 'quote' && (
           <>
             <h4>{STR.quoteDetails}</h4>
-            <div className="field">
-              <label htmlFor="lead-quote-area">{STR.requestedAreaM2}</label>
-              <input
-                id="lead-quote-area"
-                type="number"
-                min={1}
-                step={1}
-                value={quoteArea}
-                onChange={(e) => setQuoteArea(e.target.value)}
-              />
-            </div>
             <ProductChecks
               selected={quoteProducts}
               onToggle={(id) => setQuoteProducts((list) => toggle(list, id))}

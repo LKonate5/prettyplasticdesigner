@@ -92,7 +92,7 @@ export const STR = {
 
   requestSample: 'Request a sample',
   requestQuote: 'Request a quote',
-  requestHint: 'Sends your request and a link to this exact design straight to Pretty Plastic.',
+  requestHint: 'Sends your request, a picture and a link to this exact design straight to Pretty Plastic.',
   emailSent: 'Sent! Pretty Plastic will be in touch.',
   emailFallback: 'Could not send directly, so we opened your email app instead ; just hit send there.',
 
@@ -116,8 +116,9 @@ export const STR = {
   lastName: 'Last name',
   contactEmail: 'Email',
   company: 'Company',
-  projectDetails: 'Project details (optional)',
-  projectName: 'Project name',
+  projectDetails: 'Project details',
+  projectName: 'Project name (optional)',
+  projectSizeM2: 'Project size (m²)',
   projectPhase: 'Project phase',
   projectPhasePlaceholder: 'Select a phase (optional)',
   phaseConcept: 'Concept',
@@ -126,7 +127,6 @@ export const STR = {
   phaseTender: 'Tender',
   phaseConstruction: 'Construction',
   quoteDetails: 'Quote details',
-  requestedAreaM2: 'Requested area (m²)',
   sampleDetails: 'Sample details',
   streetName: 'Street name',
   streetNumber: 'Number',
@@ -141,9 +141,9 @@ export const STR = {
   sampleColoursTotalHint: 'Select up to 5 colours/shades in total.',
   exportLeadSubmit: 'Continue',
   exportLeadCancel: 'Cancel',
-  exportLeadRequired: 'Please fill in first name, last name, email and company.',
+  exportLeadRequired: 'Please fill in first name, last name, email, company and project size.',
   exportLeadInvalidEmail: 'Please enter a valid email address.',
-  quoteLeadRequired: 'Please enter a requested area and select at least one product.',
+  quoteLeadRequired: 'Please select at least one product.',
   sampleLeadRequired:
     'Please fill in the delivery address and select at least one product with 1 to 5 colours/shades in total.',
 

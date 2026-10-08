@@ -58,9 +58,14 @@ export function ControlPanel({
     pattern: design.pattern,
   };
 
-  // Captured once per visit, shared by ExportMenu and RequestButtons, before
-  // their first send/download — see LeadCaptureModal.
-  const [lead, setLead] = useState<ExportLead | null>(null);
+  // Captured once per tab, shared by ExportMenu and RequestButtons, before
+  // their first send/download — see LeadCaptureModal. Kept in sessionStorage
+  // so a reload or a new design doesn't ask again until the tab is closed.
+  const [lead, setLeadState] = useState<ExportLead | null>(loadSessionLead);
+  const setLead = (next: ExportLead) => {
+    setLeadState(next);
+    saveSessionLead(next);
+  };
   const [pendingLead, setPendingLead] = useState<{
     label: string;
     request: LeadRequestContext;
@@ -192,6 +197,7 @@ export function ControlPanel({
       <ExportMenu ctx={{ ...scene, schedule, design, order }} requireLead={requireLead} />
 
       <RequestButtons
+        scene={scene}
         design={design}
         product={product}
         schedule={schedule}
@@ -204,6 +210,7 @@ export function ControlPanel({
           formatLabel={pendingLead.label}
           request={pendingLead.request}
           initialLead={lead}
+          defaultSizeM2={schedule.roundedAreaM2}
           onSubmit={(next, cacheLead) => {
             setLead(cacheLead);
             const onReady = pendingLead.onReady;
@@ -215,4 +222,23 @@ export function ControlPanel({
       )}
     </aside>
   );
+}
+
+const LEAD_KEY = 'pp-designer-lead';
+
+function loadSessionLead(): ExportLead | null {
+  try {
+    const raw = sessionStorage.getItem(LEAD_KEY);
+    return raw ? (JSON.parse(raw) as ExportLead) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSessionLead(lead: ExportLead): void {
+  try {
+    sessionStorage.setItem(LEAD_KEY, JSON.stringify(lead));
+  } catch {
+    // Storage blocked (private mode / third-party iframe): fall back to this page load only.
+  }
 }

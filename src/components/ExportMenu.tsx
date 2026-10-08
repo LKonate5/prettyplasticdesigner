@@ -6,7 +6,7 @@ import type { TextureMap } from '../render/textures';
 import { baseName, downloadText } from '../export/download';
 import { formatMb, loadCadManifest, type CadManifest } from '../export/cad';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
-import { exportNotificationEmail, openMail, quoteEmail, submitEmail, withLead } from '../embed/email';
+import { designPhoto, exportNotificationEmail, submitEmail } from '../embed/email';
 import { STR } from '../strings';
 
 export interface ExportContext {
@@ -21,10 +21,9 @@ export interface ExportContext {
   order: Order;
 }
 
-type Format = 'email' | 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj' | 'cad';
+type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj' | 'cad';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
-  { id: 'email', label: 'Email to Pretty Plastic', note: 'Opens a pre-filled quote email with the design + link' },
   { id: 'png', label: 'PNG image', note: 'Rendered wall, transparent-free raster' },
   { id: 'jpeg', label: 'JPEG image', note: 'Smaller file, white background' },
   { id: 'svg', label: 'SVG vector', note: 'True-mm scalable vector' },
@@ -53,7 +52,7 @@ export function ExportMenu({
   requireLead,
 }: {
   ctx: ExportContext;
-  /** Shared with RequestButtons — asks once per visit (see ControlPanel). */
+  /** Shared with RequestButtons — asks once per tab (see ControlPanel). */
   requireLead: (
     label: string,
     onReady: (lead: ExportLead) => void,
@@ -107,17 +106,6 @@ export function ExportMenu({
     setMsg(null);
     try {
       switch (format) {
-        case 'email': {
-          const { subject, body } = quoteEmail(ctx.product, ctx.schedule, ctx.design, ctx.order);
-          const withContact = withLead(currentLead, body);
-          const result = await submitEmail(subject, withContact);
-          if (result.ok) setMsg(STR.emailSent);
-          else {
-            openMail(subject, withContact); // fallback: visitor's own mail app, same content
-            setMsg(`${STR.emailFallback} (${result.error})`);
-          }
-          break;
-        }
         case 'png':
         case 'jpeg': {
           const { exportRaster } = await import('../export/raster');
@@ -192,20 +180,18 @@ export function ExportMenu({
           break;
         }
       }
-      // The email case already tells Pretty Plastic who's asking; every other
-      // format is a silent download, so let them know it happened. Best-effort
-      // — a visitor's file already downloaded fine regardless of this.
-      if (format !== 'email') {
-        const label = formats.find((f) => f.id === format)?.label ?? format;
-        const { subject, body } = exportNotificationEmail(
-          currentLead,
-          label,
-          ctx.product,
-          ctx.schedule,
-          ctx.design,
-        );
-        void submitEmail(subject, body);
-      }
+      // Every format is a silent download, so let Pretty Plastic know it
+      // happened, with a picture of the design. Best-effort — the visitor's
+      // file already downloaded fine regardless of this.
+      const label = formats.find((f) => f.id === format)?.label ?? format;
+      const { subject, body } = exportNotificationEmail(
+        currentLead,
+        label,
+        ctx.product,
+        ctx.schedule,
+        ctx.design,
+      );
+      void designPhoto(scene, ctx.schedule).then((photo) => submitEmail(subject, body, photo));
     } catch (err) {
       setMsg(`Export failed: ${(err as Error).message}`);
     } finally {

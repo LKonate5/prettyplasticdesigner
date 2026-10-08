@@ -146,3 +146,38 @@ export async function exportSeamless(
   downloadBlob(blob, filename);
   return { ok: true, result: { blob, width: pxW, height: pxH, clamped } };
 }
+
+// api/_lib/sendEmail.ts rejects attachments over 700k base64 chars (~510 KB of
+// JPEG). Start at a size that reads well in an inbox and shrink until it fits.
+const PHOTO_MAX_BASE64 = 680_000;
+const PHOTO_ATTEMPTS = [
+  { maxEdge: 1600, quality: 0.8 },
+  { maxEdge: 1200, quality: 0.72 },
+  { maxEdge: 900, quality: 0.65 },
+];
+
+/**
+ * A JPEG of the design (with colour legend) small enough to attach to the
+ * emails sent to Pretty Plastic. Returns null if it can't be made small enough.
+ */
+export async function renderEmailPhoto(
+  scene: SceneInput,
+  legend: Schedule,
+  filename: string,
+): Promise<{ filename: string; contentBase64: string } | null> {
+  for (const attempt of PHOTO_ATTEMPTS) {
+    const { blob } = await renderRaster(scene, 'jpeg', 1, { legend, ...attempt });
+    const contentBase64 = await blobToBase64(blob);
+    if (contentBase64.length <= PHOTO_MAX_BASE64) return { filename, contentBase64 };
+  }
+  return null;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? '');
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read image'));
+    reader.readAsDataURL(blob);
+  });
+}

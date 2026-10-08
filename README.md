@@ -140,8 +140,8 @@ handful of values at the top of `src/styles/theme.css`.
 
 ## Configuration (`src/config.ts` and `src/data/products.ts`)
 
-- **`SALES_EMAIL`** (`config.ts`) — where the "Request a sample", "Request a
-  quote" and "Email to Pretty Plastic" buttons send their message. Defaults to
+- **`SALES_EMAIL`** (`config.ts`) — where the "Request a sample" and "Request a
+  quote" buttons (and the download notifications) send their message. Defaults to
   `info@prettyplastic.nl`.
 - **`palletM2`** (`products.ts`) — square metres of tile per europallet, per
   product (First One 40, Second High 30, Basic Third 60). Order quantities are
@@ -164,10 +164,10 @@ under Pretty Plastic's name). So:
 - The recipient (`SALES_EMAIL`) is **hard-coded server-side**, not sent by the
   browser — so the endpoint can't be turned into an open relay to some other
   address.
-- **"Request a sample"**, **"Request a quote"** and **Export → "Email to Pretty
-  Plastic"** all use this. Quote and sample requests contain a compact link
-  that reopens the exact design instead of attaching a large preview image.
-  If the send fails for any reason (missing key, offline, Resend error), each
+- **"Request a sample"**, **"Request a quote"** and the notification sent on
+  every export download all use this. Each email attaches a JPEG of the design
+  (shrunk to stay under the endpoint's ~500 KB attachment limit) plus a
+  compact link that reopens the exact design. If the send fails for any reason (missing key, offline, Resend error), each
   one falls back to opening the visitor's own email app with the same message
   pre-filled, so nothing is ever a dead end.
 

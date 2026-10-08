@@ -3,7 +3,8 @@ import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { ProductSpec } from '../core/types';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
-import { openMail, quoteEmail, sampleEmail, submitEmail, withLead } from '../embed/email';
+import { designPhoto, openMail, quoteEmail, sampleEmail, submitEmail, withLead } from '../embed/email';
+import type { SceneInput } from '../export/svg';
 import { EmailPreviewModal } from './EmailPreviewModal';
 import { STR } from '../strings';
 
@@ -23,17 +24,20 @@ type Preview = { kind: 'sample' | 'quote'; subject: string; body: string };
  * edit it or just send it as-is, same as a normal mailto: draft always let you.
  */
 export function RequestButtons({
+  scene,
   design,
   product,
   schedule,
   order,
   requireLead,
 }: {
+  /** Rendered into the picture attached to the request email. */
+  scene: SceneInput;
   design: DesignState;
   product: ProductSpec;
   schedule: Schedule;
   order: Order;
-  /** Shared with ExportMenu — asks once per visit (see ControlPanel). */
+  /** Shared with ExportMenu — asks once per tab (see ControlPanel). */
   requireLead: (
     label: string,
     onReady: (lead: ExportLead) => void,
@@ -79,7 +83,7 @@ export function RequestButtons({
       },
       {
         mode: 'quote',
-        quoteDefaults: { requestedAreaM2: order.toOrderM2, productIds: [product.id] },
+        quoteDefaults: { productIds: [product.id] },
       },
     );
   };
@@ -87,7 +91,7 @@ export function RequestButtons({
   const sendSample = async (subject: string, body: string) => {
     setPreview(null);
     setSampleStatus({ kind: 'busy' });
-    const result = await submitEmail(subject, body);
+    const result = await submitEmail(subject, body, await designPhoto(scene, schedule));
     if (result.ok) {
       setSampleStatus({ kind: 'sent' });
     } else {
@@ -99,7 +103,7 @@ export function RequestButtons({
   const sendQuote = async (subject: string, body: string) => {
     setPreview(null);
     setQuoteStatus({ kind: 'busy' });
-    const result = await submitEmail(subject, body);
+    const result = await submitEmail(subject, body, await designPhoto(scene, schedule));
     if (result.ok) {
       setQuoteStatus({ kind: 'sent' });
     } else {
