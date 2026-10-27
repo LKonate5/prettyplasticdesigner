@@ -21,15 +21,15 @@ export interface ExportContext {
   order: Order;
 }
 
-type Format = 'png' | 'jpeg' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'glb' | 'obj' | 'cad';
+type Format = 'png' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'laying' | 'glb' | 'obj' | 'cad';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
   { id: 'png', label: 'PNG image', note: 'Rendered wall, transparent-free raster' },
-  { id: 'jpeg', label: 'JPEG image', note: 'Smaller file, white background' },
   { id: 'svg', label: 'SVG vector', note: 'True-mm scalable vector' },
   { id: 'seamless', label: 'Seamless texture (PNG)', note: 'Tileable repeat for 3D / render tools' },
   { id: 'dxf', label: 'DXF (2D CAD)', note: 'AutoCAD · Revit · SketchUp ; mm, layer per colour' },
   { id: 'pdf', label: 'PDF spec sheet', note: 'Render + tile schedule for quoting' },
+  { id: 'laying', label: 'Laying plan (PDF A3)', note: 'Which tile goes where ; coordinates, colour codes, cuts' },
   { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours ; SketchUp · Blender · 3D viewers' },
   { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL ; universal 3D interchange' },
 ];
@@ -41,7 +41,9 @@ const CAD_LABEL = 'Tile CAD pack (Pretty Plastic)';
 // Image exports are for sharing/review; PDF/SVG/CAD keep the real-mm design data.
 const RASTER_PX_PER_MM = 1;
 const RASTER_MAX_EDGE = 2200;
-const RASTER_JPEG_QUALITY = 0.82;
+
+const dateLabel = () =>
+  new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 
 /**
  * Export dropdown. Each exporter is lazy-loaded on first use (dynamic import)
@@ -106,13 +108,11 @@ export function ExportMenu({
     setMsg(null);
     try {
       switch (format) {
-        case 'png':
-        case 'jpeg': {
+        case 'png': {
           const { exportRaster } = await import('../export/raster');
           const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${format}`, {
             legend: ctx.schedule,
             maxEdge: RASTER_MAX_EDGE,
-            quality: RASTER_JPEG_QUALITY,
           });
           if (r.clamped) setMsg(`Image export was capped at ${RASTER_MAX_EDGE} px on the long edge.`);
           break;
@@ -138,12 +138,25 @@ export function ExportMenu({
         }
         case 'pdf': {
           const { exportPdf } = await import('../export/pdf');
-          const dateLabel = new Date().toLocaleDateString('en-GB', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          });
-          await exportPdf(scene, ctx.schedule, ctx.options, `${name}.pdf`, dateLabel);
+          await exportPdf(scene, ctx.schedule, ctx.options, `${name}.pdf`, dateLabel());
+          break;
+        }
+        case 'laying': {
+          const { exportLayingPlan } = await import('../export/layingPlan');
+          exportLayingPlan(
+            {
+              product: ctx.product,
+              layout: ctx.layout,
+              cells: ctx.cells,
+              options: ctx.options,
+              schedule: ctx.schedule,
+              order: ctx.order,
+              design: ctx.design,
+              lead: currentLead,
+              dateLabel: dateLabel(),
+            },
+            `${name}_laying-plan.pdf`,
+          );
           break;
         }
         case 'glb': {

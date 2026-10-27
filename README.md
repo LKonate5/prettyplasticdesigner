@@ -4,7 +4,7 @@ A self-contained web tool for designing walls of Pretty Plastic recycled-PVC
 cladding tiles. Pick a product, set the wall size (in metres or rows×columns),
 auto-generate or hand-paint a **seamlessly-tileable** colour pattern from the
 12-material palette, choose a joint colour, read off a tile schedule and
-order-ready quantities, then export (PNG, JPEG, SVG, seamless texture, DXF, PDF,
+order-ready quantities, then export (PNG, SVG, seamless texture, DXF, PDF, a laying plan,
 3D GLB/OBJ), share a link, or email Pretty Plastic for a sample or a quote.
 
 It's a **static front-end app** — no server, no database. It runs entirely in
@@ -198,11 +198,12 @@ Everything below is generated **in your browser**, client-side:
 
 | Format | What it is |
 |---|---|
-| **PNG / JPEG** | A picture of the rendered wall (JPEG has a white background). |
+| **PNG** | A picture of the rendered wall. |
 | **SVG** | Scalable vector of the layout, at true 1:1 mm size. |
 | **Seamless texture (PNG)** | A tileable image — one repeat of the pattern that wraps edge-to-edge, for 3D/render tools. Needs an even row count for offset patterns. |
 | **DXF (2D)** | The industry CAD interchange file. Millimetre units, one layer per colour. Opens in **AutoCAD, Revit, and SketchUp**. |
 | **PDF spec sheet** | One A4 page: the render + a tile schedule (count/% /m²/weight per colour) for quoting. |
+| **Laying plan (PDF A3)** | The legpatroon: which tile goes where. Every tile has a coordinate (column letter + course number, e.g. `F09`) and a colour code (e.g. `T2` = terracotta, medium), with cut tiles hatched, turned Second High tiles marked, a legend with counts, and a course-by-course list. Drawn to a true scale (1:5 to 1:25); a large wall is split over numbered sheets with a key plan. |
 | **3D model — GLB** | Single self-contained file: every tile extruded to its real thickness, colours baked in. Opens in **SketchUp (2021+), Blender, Windows 3D Viewer** and online glTF viewers. |
 | **3D model — OBJ + MTL** | The same 3D wall as a zipped OBJ + material file — the most universal 3D interchange (older SketchUp, Rhino, 3ds Max, MeshLab). |
 
@@ -230,7 +231,7 @@ src/
     schedule.ts, geometry.ts, types.ts
   render/      SVG scene (used on screen AND by every export)
   components/  The control panel + preview UI
-  export/      SVG, PNG/JPEG, seamless, DXF, PDF, GLB, OBJ (each lazy-loaded)
+  export/      SVG, PNG, seamless, DXF, PDF, laying plan, GLB, OBJ (each lazy-loaded)
   data/        Product specs + palette (edit these to add products/colours)
   strings.ts   All interface text (one place → easy to translate later)
 ```
