@@ -15,21 +15,20 @@ import type { Cell, ColourId, Layout, Material, ShadeId, Tile, TileRotation } fr
 export type CutEdge = 'left' | 'right' | 'top' | 'bottom';
 
 /**
- * One letter per colour. Ochre is Y, not O, so a code never reads as a zero on
- * a printout. A Record, so adding a colour to the palette won't compile until
- * it has a letter here.
+ * Pretty Plastic's own colour letters (grey is B, blue is BE). A Record, so
+ * adding a colour to the palette won't compile until it has a code here.
  */
 const COLOUR_LETTER: Record<ColourId, string> = {
-  ochre: 'Y',
+  grey: 'B',
+  ochre: 'O',
   terracotta: 'T',
   green: 'G',
-  grey: 'S',
-  blue: 'B',
+  blue: 'BE',
 };
 
 const SHADE_DIGIT: Record<ShadeId, number> = { light: 1, medium: 2, dark: 3 };
 
-/** "T2" = terracotta, medium. Colour letter + shade (1 light, 2 medium, 3 dark). */
+/** "T2" = terracotta, medium; "BE3" = blue, dark. Colour letter + shade (1 light, 2 medium, 3 dark). */
 export function materialCode(material: Material): string {
   return `${COLOUR_LETTER[material.colour]}${SHADE_DIGIT[material.shade]}`;
 }

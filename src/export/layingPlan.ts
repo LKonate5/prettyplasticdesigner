@@ -445,10 +445,10 @@ function drawSidebar(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(...MUTED);
-  const codeNote = doc.splitTextToSize(
-    'Code = colour letter + shade (1 light, 2 medium, 3 dark). Y ochre, T terracotta, G green, S grey, B blue.',
-    SIDE_W,
-  ) as string[];
+  const codeNote = [
+    'Code = colour letter + shade (1 light, 2 medium, 3 dark).',
+    'B grey · O ochre · T terracotta · G green · BE blue',
+  ];
   doc.text(codeNote, x0, y + 1.8);
   y += codeNote.length * 2.8 + 5;
 

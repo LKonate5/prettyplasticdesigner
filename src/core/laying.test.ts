@@ -37,17 +37,21 @@ describe('columnLabel', () => {
 });
 
 describe('materialCode', () => {
-  it('is colour letter + shade digit, unique for every material', () => {
-    const codes = MATERIALS.map(materialCode);
-    expect(new Set(codes).size).toBe(MATERIALS.length);
-    expect(codes).toContain('Y2'); // ochre medium
-    expect(codes).toContain('T3'); // terracotta dark
-    expect(codes).toContain('S1'); // grey light
-    expect(codes).toContain('B2'); // blue medium
+  it('is colour letter + shade digit: grey B, ochre O, terracotta T, green G, blue BE', () => {
+    const letters: Record<string, string> = { grey: 'B', ochre: 'O', terracotta: 'T', green: 'G', blue: 'BE' };
+    const digits: Record<string, string> = { light: '1', medium: '2', dark: '3' };
+    for (const m of MATERIALS) {
+      expect(materialCode(m), `${m.colour} ${m.shade}`).toBe(`${letters[m.colour]}${digits[m.shade]}`);
+    }
   });
 
-  it('never uses the letter O', () => {
-    expect(MATERIALS.map(materialCode).some((c) => c.includes('O'))).toBe(false);
+  it('is unique for every material', () => {
+    const codes = MATERIALS.map(materialCode);
+    expect(new Set(codes).size).toBe(MATERIALS.length);
+    expect(codes).toContain('O2'); // ochre medium
+    expect(codes).toContain('T3'); // terracotta dark
+    expect(codes).toContain('B1'); // grey light
+    expect(codes).toContain('BE2'); // blue medium
   });
 });
 
