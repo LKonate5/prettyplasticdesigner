@@ -50,7 +50,9 @@ export const STR = {
   colourGrey: 'Grey',
   colourBlue: 'Blue',
   paletteHint:
-    'Click a colour to paint with it. The dot in the corner includes or excludes it from the auto-generated mix.',
+    'Click a colour to put it in or out of the auto-generated mix (black dot = in). The colour you click is also the one you paint with.',
+  clickToAdd: 'click to put it in the mix',
+  clickToRemove: 'click to take it out of the mix',
   rotation: 'Tile rotation',
   rotateTile: 'Rotate tile',
   rotateRow: 'Rotate row',

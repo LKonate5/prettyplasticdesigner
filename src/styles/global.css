@@ -310,9 +310,9 @@ input[type='checkbox'] {
 }
 
 /*
- * The corner dot toggles the material in or out of the mix: black when it is
- * in, white when it is out. The element is a roomy 30px tap target in the
- * corner; the dot itself is drawn inside it.
+ * The corner dot shows whether the material is in the mix: black when it is
+ * in, white when it is out. The whole swatch is the button, so the dot itself
+ * takes no clicks.
  */
 .swatch .allow {
   position: absolute;
@@ -326,8 +326,7 @@ input[type='checkbox'] {
   justify-content: flex-end;
   padding: 3px;
   box-sizing: border-box;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  pointer-events: none;
 }
 
 .swatch .allow::before {
@@ -345,7 +344,7 @@ input[type='checkbox'] {
   background: #000;
 }
 
-.swatch .allow:hover::before {
+.swatch:hover .allow::before {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
 }
 

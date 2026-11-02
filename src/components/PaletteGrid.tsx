@@ -23,8 +23,9 @@ const materialFor = (colour: ColourId, shade: ShadeId) =>
 /**
  * The palette laid out as a labelled grid — shades across the top (Light /
  * Medium / Dark), colours down the side — so every swatch reads as e.g.
- * "Medium Grey" without a hover. Clicking a swatch selects the paint brush;
- * the corner dot toggles whether that material is in the auto-generated mix.
+ * "Medium Grey" without a hover. Clicking anywhere on a swatch
+ * puts that material in or out of the auto-generated mix and makes it the paint
+ * brush; the corner dot only shows which state it is in.
  */
 export function PaletteGrid({
   productId,
@@ -99,19 +100,15 @@ export function PaletteGrid({
                   key={m.id}
                   className={classes}
                   style={{ background: m.hex }}
-                  title={`${m.name} — click to paint; dot toggles the mix`}
-                  onClick={() => onBrush(m.id)}
+                  title={`${m.name} — ${isAllowed ? STR.clickToRemove : STR.clickToAdd}`}
+                  aria-pressed={isAllowed}
+                  aria-label={`${m.name}: ${isAllowed ? STR.inMix : STR.outOfMix}`}
+                  onClick={() => {
+                    onBrush(m.id);
+                    onToggleAllowed(m.id);
+                  }}
                 >
-                  <span
-                    className="allow"
-                    role="checkbox"
-                    aria-checked={isAllowed}
-                    aria-label={`${m.name}: ${isAllowed ? STR.inMix : STR.outOfMix}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleAllowed(m.id);
-                    }}
-                  />
+                  <span className="allow" aria-hidden="true" />
                 </button>
               );
             })}
