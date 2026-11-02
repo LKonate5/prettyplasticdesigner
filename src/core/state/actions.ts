@@ -23,4 +23,5 @@ export type Action =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_BRUSH'; brush: MaterialId }
-  | { type: 'SET_WASTE'; wastePct: number };
+  | { type: 'SET_WASTE'; wastePct: number }
+  | { type: 'SET_REPEAT'; repeat: number };

@@ -28,6 +28,10 @@ export interface Schedule {
 
 export interface Order {
   wastePct: number;
+  /** How many times the design is built; every figure below covers all of them. */
+  repeat: number;
+  /** Tiles for the whole project (one design's tiles × repeat). */
+  projectTiles: number;
   /** Exact wall coverage in m² (for reference). */
   exactM2: number;
   /** Whole m² to cover the wall — Pretty Plastic ships full square metres only. */
@@ -45,16 +49,25 @@ export interface Order {
  * the order (coverage + waste), and the pallet count. Waste covers cuts and
  * breakage.
  */
-export function computeOrder(product: ProductSpec, schedule: Schedule, wastePct: number): Order {
-  const exactM2 = schedule.areaM2;
+export function computeOrder(
+  product: ProductSpec,
+  schedule: Schedule,
+  wastePct: number,
+  repeat = 1,
+): Order {
+  const exactM2 = schedule.areaM2 * repeat;
   // Round the wall coverage up to whole m² FIRST, then add the waste on top and
   // round up again — so "10 m² + 10%" orders 11 m², not 10 (the waste is never
   // swallowed by rounding). Sourced from the schedule so the two panels can't disagree.
-  const onWallM2 = schedule.roundedAreaM2;
+  // The repeats are ordered together, so the whole project rounds up once
+  // (4 × 9.5 m² is 38 m², not 4 × 10).
+  const onWallM2 = repeat === 1 ? schedule.roundedAreaM2 : Math.ceil(exactM2 - 1e-9);
   const toOrderM2 = Math.ceil(onWallM2 * (1 + Math.max(0, wastePct)));
   const kgPerM2 = product.weightKg * product.nominalTilesPerM2;
   return {
     wastePct,
+    repeat,
+    projectTiles: schedule.totalTiles * repeat,
     exactM2,
     onWallM2,
     toOrderM2,

@@ -46,7 +46,7 @@ export function PatternControls({
             key={p.id}
             className="preset"
             title={p.name}
-            onClick={() => onPattern({ ...p.config, seed: randomSeed() })}
+            onClick={() => onPattern({ ...p.config, weights: undefined, seed: randomSeed() })}
           >
             <span className="preset-chips">
               {p.swatch.map((id) => (

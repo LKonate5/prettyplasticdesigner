@@ -138,7 +138,7 @@ export function ExportMenu({
         }
         case 'pdf': {
           const { exportPdf } = await import('../export/pdf');
-          await exportPdf(scene, ctx.schedule, ctx.options, `${name}.pdf`, dateLabel());
+          await exportPdf(scene, ctx.schedule, ctx.options, `${name}.pdf`, dateLabel(), ctx.design.repeat);
           break;
         }
         case 'laying': {

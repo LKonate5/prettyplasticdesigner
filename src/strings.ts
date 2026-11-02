@@ -57,6 +57,14 @@ export const STR = {
   rotateColumn: 'Rotate column',
   resetRotations: 'Reset tile rotations',
   allowAll: 'Use all',
+  tileShare: 'Share of tiles',
+  tileShareHint:
+    'How much of the design is this material. The others make room, so everything still adds up to 100%.',
+  tileShareExcluded: 'This material is out of the mix. Switch its corner dot on to give it a share.',
+  tileShareSolid: 'A solid wall is a single material. Choose another pattern to mix shares.',
+  tileShareOnly: 'Only one material is in the mix, so it is the whole design.',
+  inMix: 'In the mix',
+  outOfMix: 'Not in the mix',
 
   tools: 'Tools',
   undo: 'Undo',
@@ -96,7 +104,20 @@ export const STR = {
   emailSent: 'Sent! Pretty Plastic will be in touch.',
   emailFallback: 'Could not send directly, so we opened your email app instead ; just hit send there.',
 
-  capNotice: 'That size would exceed 5,000 tiles ; reduce rows or columns.',
+  maxSizeHint: (tiles: string, m2: number, wM: string, cols: number, hM: string, rows: number) =>
+    `One design holds up to ${tiles} tiles (about ${m2} m²), at most ${cols} columns (${wM} m wide) by ${rows} rows (${hM} m high). Need a bigger wall? Repeat the design below.`,
+  overMaxWidth: (wM: string, cols: number) =>
+    `One design is at most ${wM} m wide (${cols} columns), so the width was set to that. Use Repeat for a wider wall.`,
+  overMaxHeight: (hM: string, rows: number) =>
+    `One design is at most ${hM} m high (${rows} rows), so the height was set to that. Use Repeat for a higher wall.`,
+  repeat: 'Repeat this design',
+  repeatHint: 'Build this same design several times, side by side. The schedule, order and exports count all of them.',
+  repeatTimes: '× (times)',
+  repeatTotal: (n: number, wM: string, hM: string, m2: string, tiles: string) =>
+    `${n} × ${wM} × ${hM} m = ${m2} m² in total · ${tiles} tiles`,
+  repeatScheduleNote: (n: number) =>
+    `Counts cover all ${n} repeats of the design (the wall on screen is one of them).`,
+  capNotice: 'That size would exceed 5,000 tiles ; reduce rows or columns, or repeat the design.',
 
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',

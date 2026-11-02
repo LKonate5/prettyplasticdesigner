@@ -2,6 +2,7 @@ import { isColourAllowedFor, materialIdsFor, MATERIALS } from '../../data/palett
 import { DEFAULT_OPTIONS, EXPOSURE_MAX, EXPOSURE_MIN, PRODUCTS } from '../../data/products';
 import { computeLayout } from '../layout';
 import { generatePattern } from '../pattern/generators';
+import { reconcileWeights } from '../pattern/shares';
 import type { Cell, MaterialId, PatternConfig, ProductId, ProductOptions } from '../types';
 import type { Action } from './actions';
 
@@ -25,8 +26,15 @@ export interface DesignState {
   cells: Cell[];
   /** Waste allowance (0..1) added to order quantities in the quote panel. */
   wastePct: number;
+  /**
+   * How many times this design is built (whole walls side by side). The quote,
+   * schedule and exports multiply by it, so a wall bigger than one design can
+   * hold is entered as one design repeated.
+   */
+  repeat: number;
 }
 
+export const REPEAT_MAX = 200;
 export const DEFAULT_WASTE = 0.1;
 /** Realistic ceiling for the waste allowance slider — see QuotePanel. */
 export const WASTE_MAX = 0.2;
@@ -50,7 +58,7 @@ export interface AppState {
 
 const HISTORY_CAP = 50;
 const GRID_MIN = 1;
-const GRID_MAX = 80;
+export const GRID_MAX = 80;
 
 export const DEFAULT_GRID: Record<ProductId, { rows: number; cols: number }> = {
   'first-one': { rows: 10, cols: 10 }, // ≈ 3.0 × 3.0 m; rows are physical courses
@@ -92,9 +100,11 @@ function sanitizePatternForProduct(pattern: PatternConfig, productId: ProductId)
   const allowedForProduct = materialIdsFor(productId);
   const allowedSet = new Set(allowedForProduct);
   const allowedMaterials = pattern.allowedMaterials.filter((id) => allowedSet.has(id));
+  const kept = allowedMaterials.length > 0 ? allowedMaterials : [...allowedForProduct];
   return {
     ...pattern,
-    allowedMaterials: allowedMaterials.length > 0 ? allowedMaterials : [...allowedForProduct],
+    allowedMaterials: kept,
+    weights: reconcileWeights(pattern.weights, kept),
     solidMaterial: allowedSet.has(pattern.solidMaterial) ? pattern.solidMaterial : allowedForProduct[0],
   };
 }
@@ -117,6 +127,7 @@ function buildDesign(
   options: ProductOptions,
   pattern: PatternConfig,
   wastePct = DEFAULT_WASTE,
+  repeat = 1,
 ): DesignState | null {
   const product = PRODUCTS[productId];
   const snappedRows = snapRows(productId, options, rows);
@@ -130,6 +141,7 @@ function buildDesign(
     pattern,
     cells: generatePattern(pattern, layout),
     wastePct,
+    repeat,
   };
 }
 
@@ -162,6 +174,10 @@ function clampGrid(n: number): number {
 
 function clampExposure(n: number): number {
   return Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, Math.round(n)));
+}
+
+export function clampRepeat(n: number): number {
+  return Number.isFinite(n) ? Math.max(1, Math.min(REPEAT_MAX, Math.round(n))) : 1;
 }
 
 function clampWaste(n: number): number {
@@ -199,7 +215,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const pattern = sanitizePatternForProduct(p.pattern, action.productId);
       const next = commit(
         state,
-        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, pattern, p.wastePct),
+        buildDesign(action.productId, rows, cols, { ...DEFAULT_OPTIONS }, pattern, p.wastePct, p.repeat),
       );
       const brush = sanitizeBrushForProduct(state.ui.brush, action.productId);
       return { ...next, ui: { ...next.ui, brush, selectedCell: null, rotationTool: null } };
@@ -209,7 +225,7 @@ export function appReducer(state: AppState, action: Action): AppState {
       const rows = action.rows !== undefined ? clampGrid(action.rows) : p.rows;
       const cols = action.cols !== undefined ? clampGrid(action.cols) : p.cols;
       if (rows === p.rows && cols === p.cols) return state;
-      return commit(state, buildDesign(p.productId, rows, cols, p.options, p.pattern, p.wastePct));
+      return commit(state, buildDesign(p.productId, rows, cols, p.options, p.pattern, p.wastePct, p.repeat));
     }
 
     case 'SET_OPTIONS': {
@@ -230,18 +246,21 @@ export function appReducer(state: AppState, action: Action): AppState {
       }
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, options, p.pattern, p.wastePct),
+        buildDesign(p.productId, p.rows, p.cols, options, p.pattern, p.wastePct, p.repeat),
       );
     }
 
     case 'SET_PATTERN': {
-      const pattern = { ...p.pattern, ...action.pattern };
+      const merged = { ...p.pattern, ...action.pattern };
+      // A material that comes or goes changes everyone's share; keep the
+      // stored shares in step with the allowed set.
+      const pattern = { ...merged, weights: reconcileWeights(merged.weights, merged.allowedMaterials) };
       const keys = Object.keys(action.pattern);
       // Runs on one control (tone slider, seed typing…) coalesce into one undo.
       const kind = keys.length === 1 ? `pattern:${keys[0]}` : null;
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, p.options, pattern, p.wastePct),
+        buildDesign(p.productId, p.rows, p.cols, p.options, pattern, p.wastePct, p.repeat),
         kind,
       );
     }
@@ -249,13 +268,19 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'REROLL':
       return commit(
         state,
-        buildDesign(p.productId, p.rows, p.cols, p.options, { ...p.pattern, seed: action.seed }, p.wastePct),
+        buildDesign(p.productId, p.rows, p.cols, p.options, { ...p.pattern, seed: action.seed }, p.wastePct, p.repeat),
       );
 
     case 'SET_WASTE': {
       const wastePct = clampWaste(action.wastePct);
       if (wastePct === p.wastePct) return state;
       return commit(state, { ...p, wastePct }, 'wastePct');
+    }
+
+    case 'SET_REPEAT': {
+      const repeat = clampRepeat(action.repeat);
+      if (repeat === p.repeat) return state;
+      return commit(state, { ...p, repeat }, 'repeat');
     }
 
     case 'RESET': {

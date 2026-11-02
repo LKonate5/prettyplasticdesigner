@@ -4,7 +4,8 @@ import type { Action } from '../core/state/actions';
 import type { AppState } from '../core/state/reducer';
 import { computeOrder, type Schedule } from '../core/schedule';
 import { randomSeed } from '../core/pattern/prng';
-import { materialIdsFor } from '../data/palette';
+import { effectiveShares, setShare } from '../core/pattern/shares';
+import { materialIdsFor, MATERIALS } from '../data/palette';
 import type { Layout, MaterialId, ProductSpec } from '../core/types';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { productPhotoStatus } from '../render/textures';
@@ -46,7 +47,7 @@ export function ControlPanel({
   dispatch: Dispatch<Action>;
 }) {
   const design = state.present;
-  const order = computeOrder(product, schedule, design.wastePct);
+  const order = computeOrder(product, schedule, design.wastePct, design.repeat);
   // Only judged once the manifest loaded, so no note flashes during startup.
   const photoStatus = textures.size > 0 ? productPhotoStatus(textures, product.id) : 'native';
   const scene = {
@@ -93,6 +94,13 @@ export function ControlPanel({
     dispatch({ type: 'SET_PATTERN', pattern: { allowedMaterials: next } });
   };
 
+  // The generator walks the allowed materials in palette order; shares are
+  // read and written against that same list.
+  const allowedInPaletteOrder = MATERIALS.map((m) => m.id).filter((id) =>
+    design.pattern.allowedMaterials.includes(id),
+  );
+  const shares = effectiveShares(design.pattern, allowedInPaletteOrder);
+
   return (
     <aside className={`panel${open ? ' open' : ''}`}>
       <div className="brand">
@@ -118,7 +126,9 @@ export function ControlPanel({
         cols={design.cols}
         options={design.options}
         layout={layout}
+        repeat={design.repeat}
         onGrid={(next) => dispatch({ type: 'SET_GRID', ...next })}
+        onRepeat={(repeat) => dispatch({ type: 'SET_REPEAT', repeat })}
         onOptions={(options) => dispatch({ type: 'SET_OPTIONS', options })}
       />
       {state.ui.capNotice && <p className="warn">{STR.capNotice}</p>}
@@ -135,6 +145,14 @@ export function ControlPanel({
         allowed={design.pattern.allowedMaterials}
         onBrush={(brush) => dispatch({ type: 'SET_BRUSH', brush })}
         onToggleAllowed={toggleAllowed}
+        shares={shares}
+        solid={design.pattern.type === 'solid'}
+        onShare={(id, share) =>
+          dispatch({
+            type: 'SET_PATTERN',
+            pattern: { weights: setShare(design.pattern, allowedInPaletteOrder, id, share) },
+          })
+        }
         onAllowAll={() =>
           dispatch({
             type: 'SET_PATTERN',
@@ -183,7 +201,7 @@ export function ControlPanel({
         onReset={() => dispatch({ type: 'RESET', seed: randomSeed() })}
       />
 
-      <SchedulePanel schedule={schedule} />
+      <SchedulePanel schedule={schedule} repeat={design.repeat} />
 
       <QuotePanel
         order={order}
@@ -210,7 +228,7 @@ export function ControlPanel({
           formatLabel={pendingLead.label}
           request={pendingLead.request}
           initialLead={lead}
-          defaultSizeM2={schedule.roundedAreaM2}
+          defaultSizeM2={order.onWallM2}
           onSubmit={(next, cacheLead) => {
             setLead(cacheLead);
             const onReady = pendingLead.onReady;

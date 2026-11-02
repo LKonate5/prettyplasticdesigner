@@ -90,3 +90,30 @@ describe('computeOrder', () => {
     expect(PRODUCTS['basic-third'].palletM2).toBe(60);
   });
 });
+
+describe('computeOrder with repeat', () => {
+  const l = layoutSecondHigh(11, 10); // 3.0 × 3.3 = 9.9 m²
+  const c: Cell[] = l.tiles.map(() => ({ material: 0 }));
+  const s = computeSchedule(PRODUCTS['second-high'], l, c);
+
+  it('one repeat is the same order as before', () => {
+    expect(computeOrder(PRODUCTS['second-high'], s, 0.1, 1)).toEqual(computeOrder(PRODUCTS['second-high'], s, 0.1));
+  });
+
+  it('rounds the whole project up once, not each repeat', () => {
+    const small = layoutSecondHigh(9, 9); // 2.7 × 2.7 = 7.29 m², 8 m² on its own
+    const sc = computeSchedule(PRODUCTS['second-high'], small, small.tiles.map(() => ({ material: 0 })));
+    const order = computeOrder(PRODUCTS['second-high'], sc, 0, 2);
+    expect(order.exactM2).toBeCloseTo(14.58, 6);
+    expect(order.onWallM2).toBe(15); // not 2 × 8
+    expect(order.projectTiles).toBe(sc.totalTiles * 2);
+  });
+
+  it('adds the waste on top of the whole project and counts the pallets for it', () => {
+    const order = computeOrder(PRODUCTS['second-high'], s, 0.1, 10); // 99 m² → 99 on wall
+    expect(order.onWallM2).toBe(99);
+    expect(order.toOrderM2).toBe(Math.ceil(99 * 1.1));
+    expect(order.pallets).toBe(Math.ceil(order.toOrderM2 / order.palletM2));
+  });
+});
+

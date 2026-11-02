@@ -16,6 +16,7 @@ export async function exportPdf(
   options: ProductOptions,
   filename: string,
   dateLabel: string,
+  repeat = 1,
 ): Promise<void> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = 210;
@@ -62,7 +63,7 @@ export async function exportPdf(
     startY: specStart,
     theme: 'plain',
     styles: { fontSize: 9, cellPadding: 1.2 },
-    body: specRows(product, options, schedule),
+    body: specRows(product, options, schedule, repeat),
     columnStyles: { 0: { textColor: [110, 109, 104] }, 1: { fontStyle: 'bold' } },
     margin: { left: margin, right: margin },
   });
@@ -108,7 +109,7 @@ export async function exportPdf(
   doc.save(filename);
 }
 
-function specRows(product: ProductSpec, options: ProductOptions, s: Schedule): string[][] {
+function specRows(product: ProductSpec, options: ProductOptions, s: Schedule, repeat: number): string[][] {
   const rows: string[][] = [
     ['Product', product.name],
     ['Tile size', `${product.tile.w} × ${product.tile.h} × ${product.tile.d} mm`],
@@ -119,9 +120,15 @@ function specRows(product: ProductSpec, options: ProductOptions, s: Schedule): s
   rows.push(
     ['Wall size', `${mmToM(s.wallW)} × ${mmToM(s.wallH)} m`],
     ['Square metres', `${s.roundedAreaM2} m² (exact: ${s.areaM2.toFixed(2)} m²)`],
-    ['Total tiles', String(s.totalTiles)],
-    ['Total weight', `${s.totalWeightKg.toFixed(1)} kg`],
+    [repeat > 1 ? 'Tiles (per design)' : 'Total tiles', String(s.totalTiles)],
+    [repeat > 1 ? 'Weight (per design)' : 'Total weight', `${s.totalWeightKg.toFixed(1)} kg`],
   );
+  if (repeat > 1) {
+    rows.push(
+      ['Repeat', `${repeat} × this design`],
+      ['Project total', `${Math.ceil(s.areaM2 * repeat - 1e-9)} m² · ${s.totalTiles * repeat} tiles · ${(s.totalWeightKg * repeat).toFixed(1)} kg`],
+    );
+  }
   return rows;
 }
 

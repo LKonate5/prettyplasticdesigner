@@ -1,6 +1,12 @@
 import { MATERIALS, materialIndex, stepShade } from '../../data/palette';
 import type { Cell, ColourId, Layout, MaterialId, PatternConfig } from '../types';
 import { cellRng } from './prng';
+import {
+  cumulativeShares,
+  effectiveShares,
+  quotas,
+  shareCycle,
+} from './shares';
 
 /**
  * Pure pattern generation: (config, layout) → cells. Deterministic — same
@@ -15,6 +21,7 @@ export function generatePattern(config: PatternConfig, layout: Layout): Cell[] {
   );
   const list = allowed.length > 0 ? allowed : [MATERIALS[0].id];
   const allowedSet = new Set(list);
+  const shares = effectiveShares(config, list);
 
   // Colour is keyed on the CANONICAL wrapped position (patternRow/patternCol),
   // so wrap-partner tiles — which share a cellIndex — always compute the same
@@ -24,19 +31,40 @@ export function generatePattern(config: PatternConfig, layout: Layout): Cell[] {
   const maxCol = Math.max(1, layout.patternCols - 1);
 
   if (config.type === 'random') {
-    return generateHandLaidRandom(config, layout, list);
+    return generateHandLaidRandom(config, layout, list, shares);
   }
+
+  // Until a share has been moved every material counts the same and these walk
+  // the palette exactly as they always have.
+  const plan: SharePlan = config.weights
+    ? { cycle: shareCycle(list, shares), bounds: cumulativeShares(list, shares) }
+    : { cycle: list, bounds: null };
 
   const cells: Cell[] = new Array(layout.cellCount);
   for (const tile of layout.tiles) {
     const pr = tile.patternRow;
     const pc = tile.patternCol;
     const rng = cellRng(config.seed, pr, pc);
-    let mat = baseMaterial(config, pr, pc, maxRow, maxCol, list, rng);
+    let mat = baseMaterial(config, pr, pc, maxRow, maxCol, list, plan, rng);
     if (config.type !== 'gradient') mat = applyToneVariation(mat, config, allowedSet, rng);
     cells[tile.cellIndex] = { material: materialIndex(mat) };
   }
   return cells;
+}
+
+interface SharePlan {
+  /** Stripes and checker walk this repeating run of materials. */
+  cycle: MaterialId[];
+  /** Where each gradient band ends (0..1); null = equal bands. */
+  bounds: number[] | null;
+}
+
+/** The band a position along the gradient falls in; bands with no share are skipped. */
+function bandAt(bounds: number[], t: number): number {
+  const x = Math.max(0, t);
+  for (let i = 0; i < bounds.length; i++) if (x < bounds[i]) return i;
+  for (let i = bounds.length - 1; i >= 0; i--) if (bounds[i] > (bounds[i - 1] ?? 0)) return i;
+  return bounds.length - 1;
 }
 
 function baseMaterial(
@@ -46,6 +74,7 @@ function baseMaterial(
   maxRow: number,
   maxCol: number,
   list: MaterialId[],
+  plan: SharePlan,
   rng: () => number,
 ): MaterialId {
   const n = list.length;
@@ -74,17 +103,21 @@ function baseMaterial(
       }
       // toneVariation dithers band edges so the gradient looks hand-laid.
       t += (rng() - 0.5) * config.toneVariation * (2 / n);
-      const idx = Math.min(n - 1, Math.max(0, Math.floor(t * n)));
+      const idx = plan.bounds
+        ? bandAt(plan.bounds, t)
+        : Math.min(n - 1, Math.max(0, Math.floor(t * n)));
       return list[idx];
     }
     case 'stripes': {
       const pos = config.stripes.direction === 'horizontal' ? row : col;
       const width = Math.max(1, config.stripes.width);
       const band = Math.floor(Math.max(0, pos) / width);
-      return list[band % n];
+      return plan.cycle[band % plan.cycle.length];
     }
-    case 'checker':
-      return list[(((row + col) % n) + n) % n];
+    case 'checker': {
+      const len = plan.cycle.length;
+      return plan.cycle[(((row + col) % len) + len) % len];
+    }
   }
 }
 
@@ -96,6 +129,11 @@ interface RandomContext {
   cols: number;
   list: MaterialId[];
   familyCount: number;
+  /** Each material's share of the wall, and each colour's (the sum of its materials'). */
+  shares: Map<MaterialId, number>;
+  familyShares: Map<ColourId, number>;
+  /** Whole-tile counts for the shares; they add up to the number of cells. */
+  quota: Map<MaterialId, number>;
   materialCounts: Map<MaterialId, number>;
   familyCounts: Map<ColourId, number>;
 }
@@ -109,16 +147,24 @@ function generateHandLaidRandom(
   config: PatternConfig,
   layout: Layout,
   list: MaterialId[],
+  shares: Map<MaterialId, number>,
 ): Cell[] {
   const rows = Math.max(1, layout.patternRows);
   const cols = Math.max(1, layout.patternCols);
   const families = new Set(list.map(familyOf));
+  const familyShares = new Map<ColourId, number>();
+  for (const id of list) {
+    familyShares.set(familyOf(id), (familyShares.get(familyOf(id)) ?? 0) + (shares.get(id) ?? 0));
+  }
   const ctx: RandomContext = {
     config,
     rows,
     cols,
     list,
     familyCount: families.size,
+    shares,
+    familyShares,
+    quota: quotas(shares, rows * cols),
     materialCounts: new Map(list.map((id) => [id, 0])),
     familyCounts: new Map([...families].map((id) => [id, 0])),
   };
@@ -177,18 +223,33 @@ function candidateScore(
 ): number {
   const family = familyOf(mat);
   const assigned = assignedCount(ctx) + 1;
-  const familyTarget = assigned / Math.max(1, ctx.familyCount);
-  const materialTarget = assigned / ctx.list.length;
+  const familyTarget = assigned * (ctx.familyShares.get(family) ?? 0);
+  const materialTarget = assigned * (ctx.shares.get(mat) ?? 0);
   const nextFamilyCount = (ctx.familyCounts.get(family) ?? 0) + 1;
-  const familyPressure = ctx.familyCount > 1 ? square(nextFamilyCount - familyTarget) : 0;
+  // How much worse the balance gets by adding this tile: the change in squared
+  // distance from the target, so whichever colour or material is furthest
+  // BEHIND scores lowest. (The squared distance itself rewards the ones that are
+  // already close to target, which starves the rest.)
+  const familyPressure = ctx.familyCount > 1 ? 2 * (nextFamilyCount - familyTarget) - 1 : 0;
   const familyQuotaPressure = ctx.familyCount > 1
     ? Math.max(0, nextFamilyCount - Math.ceil(familyTarget)) * 18
     : 0;
-  const materialPressure = square((ctx.materialCounts.get(mat) ?? 0) + 1 - materialTarget);
-  const sameFamilyWeight = ctx.familyCount > 1 ? 1 : 0;
+  const materialPressure = 2 * ((ctx.materialCounts.get(mat) ?? 0) + 1 - materialTarget) - 1;
+  // Keeping one colour from forming runs and blocks only works while it is a
+  // minority. Once a colour holds most of the wall they cannot be avoided, and
+  // trying would trade away tiles of the other colours the shares asked for.
+  const familyShare = ctx.familyShares.get(family) ?? 0;
+  const sameFamilyWeight = ctx.familyCount > 1 ? Math.max(0, Math.min(1, (0.8 - familyShare) / 0.3)) : 0;
   const exactWeight = 0.4 + ctx.config.toneVariation;
 
   let score = familyPressure * 5.5 + familyQuotaPressure + materialPressure * (0.25 + ctx.config.toneVariation * 0.25);
+
+  // The share each material was given is a count of tiles, not a hope: going
+  // over it costs more than any neighbour rule, so the first pass fills every
+  // quota exactly. The relaxation pass may drift a tile either way to break a
+  // pattern up, but not more.
+  const overQuota = (ctx.materialCounts.get(mat) ?? 0) + 1 - (ctx.quota.get(mat) ?? 0);
+  if (overQuota > 0) score += overQuota * (pass === 0 ? 400 : 60);
 
   for (const [dr, dc] of ORTHOGONAL) {
     const n = get(grid, ctx, row + dr, col + dc, wrap);
@@ -203,8 +264,8 @@ function candidateScore(
     if (n === mat) score += 0.45 * exactWeight;
   }
 
-  if (sameFamilyWeight && createsRun(grid, ctx, row, col, family, wrap)) score += 80;
-  if (sameFamilyWeight && createsBlock(grid, ctx, row, col, family, wrap)) score += 70;
+  if (sameFamilyWeight > 0 && createsRun(grid, ctx, row, col, family, wrap)) score += 80 * sameFamilyWeight;
+  if (sameFamilyWeight > 0 && createsBlock(grid, ctx, row, col, family, wrap)) score += 70 * sameFamilyWeight;
   if (createsExactRun(grid, ctx, row, col, mat, wrap)) score += 14 * exactWeight;
 
   const jitter = cellRng(
@@ -337,10 +398,6 @@ function indexOf(row: number, col: number, cols: number): number {
 
 function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
-}
-
-function square(n: number): number {
-  return n * n;
 }
 
 /** With probability = toneVariation, step the shade ±1 within the same colour. */

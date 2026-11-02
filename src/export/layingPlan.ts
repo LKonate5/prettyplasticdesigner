@@ -368,7 +368,10 @@ function drawSidebar(
     ['Wall', `${mmToM(layout.wallW)} × ${mmToM(layout.wallH)} m`],
     ['Area', `${schedule.areaM2.toFixed(2)} m² (${schedule.roundedAreaM2} m² rounded)`],
     ['Courses', `${plan.courses.length} (01 at the bottom)`],
-    ['Tiles', `${schedule.totalTiles} (${cutCount} cut)`],
+    [order.repeat > 1 ? 'Tiles (per design)' : 'Tiles', `${schedule.totalTiles} (${cutCount} cut)`],
+    ...(order.repeat > 1
+      ? ([['Repeat', `${order.repeat} × this design = ${order.exactM2.toFixed(2)} m², ${order.projectTiles} tiles`]] as Array<[string, string]>)
+      : []),
     ['To order', `${order.toOrderM2} m² incl. ${Math.round(order.wastePct * 100)}% waste`],
     ['Date', input.dateLabel],
   );

@@ -110,6 +110,13 @@ export interface PatternConfig {
    * ±1 within its colour. For gradient: strength of the dither at band edges.
    */
   toneVariation: number;
+  /**
+   * Share of the tiles each allowed material gets, in parts per thousand
+   * (whole numbers adding up to 1000, see core/pattern/shares.ts). Absent =
+   * the even mix. Whole numbers so a share link carries exactly what the
+   * generator used.
+   */
+  weights?: Partial<Record<MaterialId, number>>;
   solidMaterial: MaterialId;
   gradient: { direction: 'horizontal' | 'vertical' | 'diagonal' };
   stripes: { direction: 'horizontal' | 'vertical'; width: number }; // width in cells

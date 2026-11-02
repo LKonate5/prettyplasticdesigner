@@ -5,6 +5,7 @@ import { layoutSecondHigh } from '../layout/secondHigh';
 import type { Cell } from '../types';
 import type { MaterialId, PatternConfig, PatternType } from '../types';
 import { generatePattern } from './generators';
+import { effectiveShares, quotas, setShare } from './shares';
 
 const base = (over: Partial<PatternConfig> = {}): PatternConfig => ({
   type: 'random',
@@ -196,5 +197,141 @@ describe('pattern generators', () => {
     );
     expect(cells.every((cell) => allowedIdx.has(cell.material))).toBe(true);
     expect(new Set(cells.map((cell) => cell.material)).size).toBeGreaterThan(1);
+  });
+});
+
+const ALL_IDS = MATERIALS.map((m) => m.id) as MaterialId[];
+
+const tally = (cells: Cell[]): Map<MaterialId, number> => {
+  const counts = new Map<MaterialId, number>();
+  for (const cell of cells) {
+    const id = MATERIALS[cell.material].id;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+};
+
+describe('tile shares in the generators', () => {
+  it('the even random mix uses every allowed material, not just a favoured few', () => {
+    const layout = layoutFirstOne(12, 18);
+    for (const seed of [42, 7, 2024]) {
+      const counts = tally(generatePattern(base({ seed }), layout));
+      expect(counts.size).toBe(ALL_IDS.length);
+      const values = [...counts.values()];
+      expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('leaving a shade out keeps its colour at an equal share of the wall', () => {
+    const layout = layoutFirstOne(12, 18);
+    const allowed = ALL_IDS.filter((id) => id !== 'grey-dark');
+    const counts = tally(generatePattern(base({ allowedMaterials: allowed }), layout));
+    expect(counts.has('grey-dark')).toBe(false);
+    const grey = (counts.get('grey-light') ?? 0) + (counts.get('grey-medium') ?? 0);
+    const green = (counts.get('green-light') ?? 0) + (counts.get('green-medium') ?? 0) + (counts.get('green-dark') ?? 0);
+    expect(Math.abs(grey - green)).toBeLessThanOrEqual(3);
+  });
+
+  it('a random wall honours the share set for a material, from none to all of it', () => {
+    const layout = layoutFirstOne(12, 18);
+    for (const seed of [42, 7]) {
+      for (const share of [0, 0.1, 0.4, 0.7, 1]) {
+        const config = base({ seed });
+        const weighted = { ...config, weights: setShare(config, ALL_IDS, 'ochre-medium', share) };
+        const cells = generatePattern(weighted, layout);
+        const want = quotas(effectiveShares(weighted, ALL_IDS), cells.length);
+        const got = tally(cells);
+        // a hand-laid wall may bend a quota by a tile or two to break up a run
+        expect(Math.abs((got.get('ochre-medium') ?? 0) - want.get('ochre-medium')!)).toBeLessThanOrEqual(3);
+        if (share === 0) expect(got.has('ochre-medium')).toBe(false);
+        if (share === 1) expect(got.size).toBe(1);
+      }
+    }
+  });
+
+  it('what one material gives up is shared out between the rest', () => {
+    const layout = layoutFirstOne(12, 18);
+    const config = base();
+    const weighted = { ...config, weights: setShare(config, ALL_IDS, 'blue-dark', 0.3) };
+    const cells = generatePattern(weighted, layout);
+    const got = tally(cells);
+    expect(got.get('blue-dark')).toBeGreaterThan(cells.length * 0.27);
+    expect(got.size).toBe(ALL_IDS.length);
+    for (const [id, n] of got) {
+      if (id !== 'blue-dark') expect(n).toBeLessThan(cells.length * 0.08);
+    }
+  });
+
+  it('a weighted random wall is still deterministic for a seed', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const config = base();
+    const weighted = { ...config, weights: setShare(config, ALL_IDS, 'green-dark', 0.25) };
+    expect(generatePattern(weighted, layout)).toEqual(generatePattern(weighted, layout));
+  });
+
+  it('a gradient gives each band the length of its share', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const { patternRows: rows, patternCols: cols } = layout;
+    const allowed: MaterialId[] = ['green-light', 'green-dark'];
+    const config = base({
+      type: 'gradient',
+      toneVariation: 0,
+      allowedMaterials: allowed,
+      gradient: { direction: 'horizontal' },
+    });
+    const weighted = { ...config, weights: setShare(config, allowed, 'green-light', 0.7) };
+    const cells = generatePattern(weighted, layout);
+    const light = cells.filter((c) => MATERIALS[c.material].id === 'green-light').length;
+    // whole rows of cells: 70% of the wall give or take one row
+    expect(Math.abs(light / cols - rows * 0.7)).toBeLessThanOrEqual(1);
+    // and with no share moved it is the plain half and half it always was
+    const plain = generatePattern(config, layout);
+    const plainLight = plain.filter((c) => MATERIALS[c.material].id === 'green-light').length;
+    expect(Math.abs(plainLight / cols - rows * 0.5)).toBeLessThanOrEqual(1);
+  });
+
+  it('a gradient skips a material that has no share', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const allowed: MaterialId[] = ['green-light', 'green-medium', 'green-dark'];
+    const config = base({ type: 'gradient', toneVariation: 0, allowedMaterials: allowed });
+    const weighted = { ...config, weights: setShare(config, allowed, 'green-medium', 0) };
+    expect(tally(generatePattern(weighted, layout)).has('green-medium')).toBe(false);
+  });
+
+  it('stripes and the checker lay a material as often as its share says', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const allowed: MaterialId[] = ['green-light', 'green-dark'];
+    for (const type of ['stripes', 'checker'] as const) {
+      const config = base({
+        type,
+        toneVariation: 0,
+        allowedMaterials: allowed,
+        stripes: { direction: 'horizontal', width: 1 },
+      });
+      const weighted = { ...config, weights: setShare(config, allowed, 'green-dark', 0.75) };
+      const got = tally(generatePattern(weighted, layout));
+      const dark = got.get('green-dark') ?? 0;
+      expect(dark / layout.cellCount).toBeGreaterThan(0.65);
+      expect(dark / layout.cellCount).toBeLessThan(0.85);
+    }
+  });
+
+  it('with no share moved, stripes and the checker walk the palette in order as before', () => {
+    const layout = layoutSecondHigh(10, 10);
+    const { patternRows: rows, patternCols: cols } = layout;
+    const allowed: MaterialId[] = ['green-light', 'green-medium', 'green-dark'];
+    const stripes = generatePattern(
+      base({ type: 'stripes', toneVariation: 0, allowedMaterials: allowed, stripes: { direction: 'horizontal', width: 1 } }),
+      layout,
+    );
+    for (let row = 0; row < rows; row++) {
+      expect(MATERIALS[stripes[row * cols].material].id).toBe(allowed[row % allowed.length]);
+    }
+    const checker = generatePattern(base({ type: 'checker', toneVariation: 0, allowedMaterials: allowed }), layout);
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        expect(MATERIALS[checker[row * cols + col].material].id).toBe(allowed[(row + col) % allowed.length]);
+      }
+    }
   });
 });

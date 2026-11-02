@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MATERIALS } from '../../data/palette';
 import type { AppState } from './reducer';
-import { appReducer, initialAppState } from './reducer';
+import { appReducer, initialAppState, REPEAT_MAX } from './reducer';
 import type { Action } from './actions';
+import { setShare } from '../pattern/shares';
 
 const run = (state: AppState, ...actions: Action[]): AppState =>
   actions.reduce(appReducer, state);
@@ -152,5 +153,118 @@ describe('app reducer + history', () => {
   it('ignores rotation actions outside Second High', () => {
     const s = initialAppState(7);
     expect(run(s, { type: 'ROTATE_CELL', cellIndex: 0 })).toBe(s);
+  });
+});
+
+describe('tile shares', () => {
+  const weightSum = (s: AppState) =>
+    Object.values(s.present.pattern.weights ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+  const count = (s: AppState, id: string) =>
+    s.present.cells.filter((cell) => MATERIALS[cell.material].id === id).length;
+
+  it('a new design has no shares set, so the mix stays even', () => {
+    expect(initialAppState(7).present.pattern.weights).toBeUndefined();
+  });
+
+  it('moving a share regenerates the wall with that many tiles', () => {
+    let s = initialAppState(7);
+    const before = count(s, 'ochre-medium');
+    const { pattern } = s.present;
+    const weights = setShare(pattern, pattern.allowedMaterials, 'ochre-medium', 1);
+    s = run(s, { type: 'SET_PATTERN', pattern: { weights } });
+    expect(weightSum(s)).toBe(1000);
+    expect(count(s, 'ochre-medium')).toBe(s.present.cells.length);
+    expect(count(s, 'ochre-medium')).toBeGreaterThan(before);
+  });
+
+  it('a slider drag is ONE undo entry', () => {
+    let s = initialAppState(7);
+    const before = s.present;
+    for (const w of [100, 200, 300, 400]) {
+      s = run(s, {
+        type: 'SET_PATTERN',
+        pattern: { weights: { 'ochre-medium': w, 'green-dark': 1000 - w } },
+      });
+    }
+    expect(s.past.length).toBe(1);
+    s = run(s, { type: 'UNDO' });
+    expect(s.present).toEqual(before);
+  });
+
+  it('taking a material out of the mix drops its share and refills the wall', () => {
+    let s = initialAppState(7);
+    const all = s.present.pattern.allowedMaterials;
+    s = run(s, {
+      type: 'SET_PATTERN',
+      pattern: { weights: { 'ochre-medium': 500, 'green-dark': 300, 'grey-light': 200 } },
+    });
+    s = run(s, {
+      type: 'SET_PATTERN',
+      pattern: { allowedMaterials: all.filter((id) => id !== 'green-dark') },
+    });
+    const weights = s.present.pattern.weights ?? {};
+    expect('green-dark' in weights).toBe(false);
+    expect(weightSum(s)).toBe(1000);
+    expect(count(s, 'green-dark')).toBe(0);
+  });
+
+  it('putting a material back gives it an even share again', () => {
+    let s = initialAppState(7);
+    const all = s.present.pattern.allowedMaterials;
+    const without = all.filter((id) => id !== 'green-dark');
+    s = run(
+      s,
+      { type: 'SET_PATTERN', pattern: { allowedMaterials: without, weights: { 'ochre-medium': 400, 'grey-light': 600 } } },
+      { type: 'SET_PATTERN', pattern: { allowedMaterials: [...without, 'green-dark'] } },
+    );
+    expect(weightSum(s)).toBe(1000);
+    expect(s.present.pattern.weights?.['green-dark']).toBeGreaterThan(0);
+  });
+
+  it('carrying shares to a product without Blue keeps them valid', () => {
+    let s = initialAppState(7);
+    expect(s.present.productId).toBe('first-one');
+    s = run(s, {
+      type: 'SET_PATTERN',
+      pattern: { weights: { 'blue-dark': 500, 'ochre-medium': 500 } },
+    });
+    s = run(s, { type: 'SET_PRODUCT', productId: 'second-high' });
+    const weights = s.present.pattern.weights ?? {};
+    expect('blue-dark' in weights).toBe(false);
+    expect(weights['ochre-medium']).toBeGreaterThan(0);
+    expect(weightSum(s)).toBe(1000);
+    expect(s.present.cells.every((cell) => MATERIALS[cell.material].colour !== 'blue')).toBe(true);
+  });
+});
+
+describe('repeat', () => {
+  it('starts at one and keeps the wall as it is', () => {
+    const s = initialAppState(7);
+    const next = run(s, { type: 'SET_REPEAT', repeat: 4 });
+    expect(s.present.repeat).toBe(1);
+    expect(next.present.repeat).toBe(4);
+    expect(next.present.cells).toBe(s.present.cells);
+  });
+
+  it('clamps to a whole number between 1 and the maximum', () => {
+    const s = initialAppState(7);
+    expect(run(s, { type: 'SET_REPEAT', repeat: 0 }).present.repeat).toBe(1);
+    expect(run(s, { type: 'SET_REPEAT', repeat: 2.6 }).present.repeat).toBe(3);
+    expect(run(s, { type: 'SET_REPEAT', repeat: 9999 }).present.repeat).toBe(REPEAT_MAX);
+    expect(run(s, { type: 'SET_REPEAT', repeat: NaN }).present.repeat).toBe(1);
+  });
+
+  it('survives a size, product or pattern change, and undoes in one step', () => {
+    let s = run(initialAppState(7), { type: 'SET_REPEAT', repeat: 5 }, { type: 'SET_REPEAT', repeat: 6 });
+    expect(s.past.length).toBe(1);
+    s = run(s, { type: 'SET_GRID', rows: 12 }, { type: 'REROLL', seed: 3 }, { type: 'SET_PRODUCT', productId: 'second-high' });
+    expect(s.present.repeat).toBe(6);
+    s = run(initialAppState(7), { type: 'SET_REPEAT', repeat: 5 }, { type: 'UNDO' });
+    expect(s.present.repeat).toBe(1);
+  });
+
+  it('a reset starts over with a single design', () => {
+    const s = run(initialAppState(7), { type: 'SET_REPEAT', repeat: 5 }, { type: 'RESET', seed: 9 });
+    expect(s.present.repeat).toBe(1);
   });
 });

@@ -285,6 +285,13 @@ input[type='checkbox'] {
   border: 2px solid transparent;
   cursor: pointer;
   padding: 0;
+  /* a tap should select or toggle, never flash the browser's own highlight; and
+     switching the dot on and off quickly is a double-click, which would
+     otherwise select the swatch and paint it in the selection colour */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .swatch.brush {
@@ -292,24 +299,76 @@ input[type='checkbox'] {
   box-shadow: inset 0 0 0 2px #fff;
 }
 
-.swatch.excluded {
-  opacity: 0.3;
+/* Out of the mix: wash the swatch out, but not the dot, so the state stays readable. */
+.swatch.excluded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.68);
+  pointer-events: none;
 }
 
+/*
+ * The corner dot toggles the material in or out of the mix: black when it is
+ * in, white when it is out. The element is a roomy 30px tap target in the
+ * corner; the dot itself is drawn inside it.
+ */
 .swatch .allow {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  background: transparent;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 3px;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.swatch.allowed .allow {
+.swatch .allow::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
   background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.swatch.allowed .allow::before {
+  background: #000;
+}
+
+.swatch .allow:hover::before {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+.share {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pp-border);
+}
+
+.share > label {
+  display: block;
+  font-size: 12px;
+  color: var(--pp-muted);
+  margin-bottom: 4px;
+}
+
+.share > label strong {
+  color: var(--pp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.share input[type='range']:disabled {
+  opacity: 0.45;
 }
 
 /* ---- preview ---- */
@@ -605,4 +664,13 @@ table.schedule {
     min-height: 40px;
   }
 
+}
+
+.repeat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.repeat input {
+  width: 84px;
 }

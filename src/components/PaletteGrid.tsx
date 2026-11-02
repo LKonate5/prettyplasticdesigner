@@ -33,6 +33,9 @@ export function PaletteGrid({
   onBrush,
   onToggleAllowed,
   onAllowAll,
+  shares,
+  solid,
+  onShare,
 }: {
   productId: ProductId;
   brush: MaterialId;
@@ -40,10 +43,25 @@ export function PaletteGrid({
   onBrush: (id: MaterialId) => void;
   onToggleAllowed: (id: MaterialId) => void;
   onAllowAll: () => void;
+  /** Each allowed material's share of the design (fractions adding up to 1). */
+  shares: Map<MaterialId, number>;
+  /** A solid wall has no mix to share out. */
+  solid: boolean;
+  onShare: (id: MaterialId, share: number) => void;
 }) {
   const COLOURS = ALL_COLOURS.filter((c) => isColourAllowedFor(c.id, productId));
   const allowedSet = new Set(allowed);
   const brushName = MATERIALS.find((m) => m.id === brush)?.name ?? '';
+  const brushAllowed = allowedSet.has(brush);
+  const onlyOne = allowed.length <= 1;
+  const sharePct = brushAllowed ? Math.round((shares.get(brush) ?? 0) * 100) : 0;
+  const shareNote = solid
+    ? STR.tileShareSolid
+    : !brushAllowed
+      ? STR.tileShareExcluded
+      : onlyOne
+        ? STR.tileShareOnly
+        : STR.tileShareHint;
 
   return (
     <div className="section">
@@ -86,6 +104,9 @@ export function PaletteGrid({
                 >
                   <span
                     className="allow"
+                    role="checkbox"
+                    aria-checked={isAllowed}
+                    aria-label={`${m.name}: ${isAllowed ? STR.inMix : STR.outOfMix}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleAllowed(m.id);
@@ -96,6 +117,31 @@ export function PaletteGrid({
             })}
           </Fragment>
         ))}
+      </div>
+
+      <div className="share">
+        <label htmlFor="share">
+          {STR.tileShare}
+          {!solid && (
+            <>
+              :{' '}
+              <strong>
+                {brushName} {sharePct}%
+              </strong>
+            </>
+          )}
+        </label>
+        <input
+          id="share"
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={solid ? 0 : sharePct}
+          disabled={solid || !brushAllowed || onlyOne}
+          onChange={(e) => onShare(brush, Number(e.target.value) / 100)}
+        />
+        <p className="note">{shareNote}</p>
       </div>
 
       <p className="note">{STR.paletteHint}</p>

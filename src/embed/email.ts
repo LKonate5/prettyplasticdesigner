@@ -108,13 +108,17 @@ export function projectLines(
   schedule: Schedule,
   design: DesignState,
 ): string[] {
+  const n = design.repeat;
+  const totalM2 = n === 1 ? schedule.roundedAreaM2 : Math.ceil(schedule.areaM2 * n - 1e-9);
   return [
     `Product: ${product.name} (${product.tile.w}×${product.tile.h}×${product.tile.d} mm)`,
-    `Wall size: ${m(schedule.wallW)} × ${m(schedule.wallH)} m (${schedule.roundedAreaM2} m²)`,
+    n === 1
+      ? `Wall size: ${m(schedule.wallW)} × ${m(schedule.wallH)} m (${schedule.roundedAreaM2} m²)`
+      : `Wall size: ${n} × ${m(schedule.wallW)} × ${m(schedule.wallH)} m (${totalM2} m² in total)`,
     design.productId === 'basic-third' ? `Bond: ${design.options.bond}` : '',
     '',
     'Colours used:',
-    ...schedule.rows.map((r) => `  • ${r.material.name}: ${r.count} tiles (${r.pct.toFixed(0)}%)`),
+    ...schedule.rows.map((r) => `  • ${r.material.name}: ${r.count * n} tiles (${r.pct.toFixed(0)}%)`),
   ].filter((l) => l !== '');
 }
 

@@ -76,3 +76,17 @@ describe('lead email content', () => {
     expect(body).toContain('Design link: #d=');
   });
 });
+
+describe('repeat in emails', () => {
+  it('states the repeat, the project area and the project tile counts in the quote email', () => {
+    const { design, product, schedule } = fixtures();
+    const repeated = { ...design, repeat: 4 };
+    const order = computeOrder(product, schedule, repeated.wastePct, 4);
+    const { body } = quoteEmail(product, schedule, repeated, order);
+    expect(body).toContain('Wall size: 4 × ');
+    expect(body).toContain(`${order.onWallM2} m² in total`);
+    expect(body).toContain(`${schedule.rows[0].count * 4} tiles`);
+    expect(body).toContain(`To order (incl. 10% waste): ${order.toOrderM2} m²`);
+  });
+});
+

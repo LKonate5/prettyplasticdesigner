@@ -1,6 +1,7 @@
 import { computeLayout } from '../core/layout';
 import { generatePattern } from '../core/pattern/generators';
-import { DEFAULT_WASTE, WASTE_MAX, type DesignState } from '../core/state/reducer';
+import { reconcileWeights } from '../core/pattern/shares';
+import { clampRepeat, DEFAULT_WASTE, WASTE_MAX, type DesignState } from '../core/state/reducer';
 import type { Cell, MaterialId, PatternType, ProductId } from '../core/types';
 import { isColourAllowedFor, materialAt, materialIndex, MATERIALS, MATERIAL_IDS } from '../data/palette';
 import { PRODUCTS } from '../data/products';
@@ -29,11 +30,13 @@ interface Packed {
   tv: number; // toneVariation
   sm: number; // solidMaterial index
   am: number[]; // allowedMaterials indices
+  ws?: number[]; // weights (parts per thousand), one per `am` entry; absent = even mix
   gdir?: GradientDirection; // gradient direction, named for the bands it draws
   gd?: GradientDirection; // pre-flip gradient direction — decode only, see below
   sdir: 'horizontal' | 'vertical';
   sw: number; // stripe width
   w: number; // waste fraction
+  rp?: number; // repeat count; absent = 1
   o: Array<[number, number] | [number, number, 0 | 90 | 180 | 270]>;
 }
 
@@ -88,10 +91,14 @@ export function encodeDesign(design: DesignState): string {
     tv: design.pattern.toneVariation,
     sm: materialIndex(design.pattern.solidMaterial),
     am: design.pattern.allowedMaterials.map(materialIndex),
+    ...(design.pattern.weights
+      ? { ws: design.pattern.allowedMaterials.map((id) => design.pattern.weights?.[id] ?? 0) }
+      : {}),
     gdir: design.pattern.gradient.direction,
     sdir: design.pattern.stripes.direction,
     sw: design.pattern.stripes.width,
     w: design.wastePct,
+    ...(design.repeat > 1 ? { rp: design.repeat } : {}),
     o: overrides,
   };
   return toUrlSafe(btoa(unescape(encodeURIComponent(JSON.stringify(packed)))));
@@ -111,6 +118,18 @@ export function decodeDesign(str: string): DesignState | null {
       return !colour || isColourAllowedFor(colour, packed.p);
     };
     const solidMaterial = asMaterial(packed.sm);
+    const allowedMaterials = (packed.am?.length ? packed.am : MATERIAL_IDS.map((_, i) => i))
+      .map(asMaterial)
+      .filter(allowedForColour);
+    // Shares line up with `am` by position, so read them before anything is filtered out.
+    const weights =
+      packed.ws && packed.am && packed.ws.length === packed.am.length
+        ? Object.fromEntries(
+            packed.am
+              .map((index, i) => [asMaterial(index), packed.ws?.[i] ?? 0] as const)
+              .filter(([id]) => allowedMaterials.includes(id)),
+          )
+        : undefined;
     const design: DesignState = {
       productId: packed.p,
       rows: packed.r,
@@ -119,9 +138,8 @@ export function decodeDesign(str: string): DesignState | null {
       pattern: {
         type: packed.t,
         seed: packed.s >>> 0,
-        allowedMaterials: (packed.am?.length ? packed.am : MATERIAL_IDS.map((_, i) => i))
-          .map(asMaterial)
-          .filter(allowedForColour),
+        allowedMaterials,
+        weights: reconcileWeights(weights, allowedMaterials),
         toneVariation: packed.tv,
         solidMaterial: allowedForColour(solidMaterial) ? solidMaterial : 'grey-medium',
         gradient: { direction: gradientDirection(packed) },
@@ -129,6 +147,7 @@ export function decodeDesign(str: string): DesignState | null {
       },
       cells: [],
       wastePct: typeof packed.w === 'number' ? Math.max(0, Math.min(WASTE_MAX, packed.w)) : DEFAULT_WASTE,
+      repeat: typeof packed.rp === 'number' ? clampRepeat(packed.rp) : 1,
     };
     // Regenerate the baseline, then apply hand-painted material and T2 rotation
     // overrides. Rotation from old links is accepted too.
