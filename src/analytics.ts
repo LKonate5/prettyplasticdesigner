@@ -74,20 +74,19 @@ function showConsentBanner(): void {
   bar.setAttribute('role', 'dialog');
   bar.setAttribute('aria-label', 'Cookies');
   bar.style.cssText =
-    'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:520px;background:#fff;color:#1c1c1e;' +
-    'border:1px solid #dedbd4;border-radius:6px;padding:12px 14px;font:13px/1.4 "Work Sans",system-ui,sans-serif;' +
-    'box-shadow:0 4px 18px rgba(0,0,0,.15);display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    'position:fixed;left:12px;bottom:12px;z-index:9999;max-width:340px;background:#eeece8;color:#26282b;' +
+    'border:1px solid #dedbd4;border-radius:6px;padding:10px 12px;font:12px/1.45 "Work Sans",system-ui,sans-serif;' +
+    'display:flex;gap:6px 12px;align-items:center;flex-wrap:wrap';
   const text = document.createElement('span');
-  text.style.flex = '1 1 220px';
-  text.textContent =
-    'We use marketing cookies (Meta) to measure our ads. Allow them? The designer works either way.';
+  text.style.cssText = 'flex:1 1 100%;color:#6f6d68';
+  text.textContent = 'Help us improve? We use a few marketing cookies. The designer works either way.';
   const mk = (label: string, primary: boolean, v: 'granted' | 'denied') => {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = label;
     b.style.cssText =
-      'cursor:pointer;border-radius:6px;padding:6px 12px;font:inherit;border:1px solid #cf5b2e;' +
-      (primary ? 'background:#cf5b2e;color:#fff' : 'background:#fff;color:#cf5b2e');
+      'cursor:pointer;border-radius:4px;padding:3px 10px;font:inherit;font-weight:500;border:1px solid ' +
+      (primary ? '#cf5b2e;background:#cf5b2e;color:#fff' : 'transparent;background:transparent;color:#6f6d68');
     b.onclick = () => {
       storeConsent(v);
       bar.remove();
@@ -95,7 +94,7 @@ function showConsentBanner(): void {
     };
     return b;
   };
-  bar.append(text, mk('Decline', false, 'denied'), mk('Allow', true, 'granted'));
+  bar.append(text, mk('Only necessary', false, 'denied'), mk('Yes, help', true, 'granted'));
   document.body.appendChild(bar);
 }
 
