@@ -4,6 +4,7 @@ import { App } from './App';
 import { initAnalytics } from './analytics';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { startAutoHeight } from './embed/autoHeight';
+import { installPreloadErrorReload } from './embed/chunkReload';
 import { loadTextures } from './render/textures';
 import type { TextureMap } from './render/textures';
 import '@fontsource/work-sans/400.css';
@@ -12,6 +13,9 @@ import '@fontsource/work-sans/600.css';
 import '@fontsource/work-sans/700.css';
 import './styles/theme.css';
 import './styles/global.css';
+
+// Stale hashed chunks after a deploy: reload once onto the new index.html.
+installPreloadErrorReload();
 
 const root = createRoot(document.getElementById('root')!);
 initAnalytics();

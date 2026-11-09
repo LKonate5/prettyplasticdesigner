@@ -144,6 +144,8 @@ export async function designPhoto(
     const name = baseName(scene.product.id, scene.layout.rows, scene.layout.cols);
     return (await renderEmailPhoto(scene, schedule, `${name}.jpg`)) ?? undefined;
   } catch {
+    // Best-effort attachment. Stale-chunk failures after a deploy are handled
+    // in ExportMenu / main.tsx (this path must not reload mid-flow).
     return undefined;
   }
 }

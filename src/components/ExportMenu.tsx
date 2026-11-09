@@ -8,6 +8,8 @@ import { baseName, downloadText } from '../export/download';
 import { formatMb, loadCadManifest, type CadManifest } from '../export/cad';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { designPhoto, exportNotificationEmail, submitEmail } from '../embed/email';
+import { isChunkLoadError, reloadForNewDeploy } from '../embed/chunkReload';
+import { shareUrl } from '../embed/share';
 import { STR } from '../strings';
 
 export interface ExportContext {
@@ -211,6 +213,23 @@ export function ExportMenu({
       );
       void designPhoto(scene, ctx.schedule).then((photo) => submitEmail(subject, body, photo));
     } catch (err) {
+      // Stale hashed chunk after a deploy — the tab still points at an old
+      // /assets/*.js that 404s. Persist the design into the URL hash (same as
+      // Share) so it survives the reload, then pick up the new build.
+      if (isChunkLoadError(err)) {
+        try {
+          history.replaceState(null, '', shareUrl(ctx.design));
+        } catch {
+          /* iframe / history blocked — fall through to a manual reload ask */
+        }
+        setMsg('The designer was just updated — reloading…');
+        if (!reloadForNewDeploy()) {
+          setMsg(
+            'The designer was just updated. Please reload this page and export again — your design is kept in the address bar if you used Share, or try Copy link first.',
+          );
+        }
+        return;
+      }
       setMsg(`Export failed: ${(err as Error).message}`);
     } finally {
       setBusy(null);
