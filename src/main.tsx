@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { initAnalytics } from './analytics';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { startAutoHeight } from './embed/autoHeight';
 import { loadTextures } from './render/textures';
@@ -13,6 +14,7 @@ import './styles/theme.css';
 import './styles/global.css';
 
 const root = createRoot(document.getElementById('root')!);
+initAnalytics();
 
 function render(textures: TextureMap) {
   root.render(

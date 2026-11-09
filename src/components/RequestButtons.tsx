@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackDesignerEvent } from '../analytics';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { ProductSpec } from '../core/types';
@@ -93,6 +94,7 @@ export function RequestButtons({
     setSampleStatus({ kind: 'busy' });
     const result = await submitEmail(subject, body, await designPhoto(scene, schedule));
     if (result.ok) {
+      trackDesignerEvent('facade_designer_sample_request', { product_id: product.id });
       setSampleStatus({ kind: 'sent' });
     } else {
       openMail(subject, body); // fallback: visitor's own mail app, same content
@@ -105,6 +107,7 @@ export function RequestButtons({
     setQuoteStatus({ kind: 'busy' });
     const result = await submitEmail(subject, body, await designPhoto(scene, schedule));
     if (result.ok) {
+      trackDesignerEvent('facade_designer_quote_request', { product_id: product.id });
       setQuoteStatus({ kind: 'sent' });
     } else {
       openMail(subject, body);

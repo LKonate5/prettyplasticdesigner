@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { trackDesignerEvent } from '../analytics';
 import type { Cell, Layout, PatternConfig, ProductOptions, ProductSpec } from '../core/types';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
@@ -193,6 +194,10 @@ export function ExportMenu({
           break;
         }
       }
+      trackDesignerEvent('facade_designer_export', {
+        product_id: ctx.product.id,
+        export_format: format,
+      });
       // Every format is a silent download, so let Pretty Plastic know it
       // happened, with a picture of the design. Best-effort — the visitor's
       // file already downloaded fine regardless of this.
