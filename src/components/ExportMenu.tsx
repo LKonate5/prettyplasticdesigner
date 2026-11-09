@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { trackDesignerEvent } from '../analytics';
 import type { Cell, Layout, PatternConfig, ProductOptions, ProductSpec } from '../core/types';
 import type { Order, Schedule } from '../core/schedule';
 import type { DesignState } from '../core/state/reducer';
 import type { TextureMap } from '../render/textures';
-import { baseName, downloadText } from '../export/download';
-import { formatMb, loadCadManifest, type CadManifest } from '../export/cad';
+import { baseName } from '../export/download';
 import type { ExportLead, LeadRequestContext } from '../embed/email';
 import { designPhoto, exportNotificationEmail, submitEmail } from '../embed/email';
 import { isChunkLoadError, reloadForNewDeploy } from '../embed/chunkReload';
@@ -24,24 +23,15 @@ export interface ExportContext {
   order: Order;
 }
 
-type Format = 'png' | 'svg' | 'seamless' | 'dxf' | 'pdf' | 'laying' | 'glb' | 'obj' | 'cad';
+type Format = 'png' | 'jpeg' | 'pdf' | 'laying';
 
 const FORMATS: Array<{ id: Format; label: string; note: string }> = [
-  { id: 'png', label: 'PNG image', note: 'Rendered wall, transparent-free raster' },
-  { id: 'svg', label: 'SVG vector', note: 'True-mm scalable vector' },
-  { id: 'seamless', label: 'Seamless texture (PNG)', note: 'Tileable repeat for 3D / render tools' },
-  { id: 'dxf', label: 'DXF (2D CAD)', note: 'AutoCAD · Revit · SketchUp ; mm, layer per colour' },
-  { id: 'pdf', label: 'PDF spec sheet', note: 'Render + tile schedule for quoting' },
-  { id: 'laying', label: 'Laying plan (PDF A3)', note: 'Which tile goes where ; coordinates, colour codes, cuts' },
-  { id: 'glb', label: '3D model (GLB)', note: 'Single file with colours ; SketchUp · Blender · 3D viewers' },
-  { id: 'obj', label: '3D model (OBJ + MTL)', note: 'Zipped OBJ+MTL ; universal 3D interchange' },
+  { id: 'png', label: 'PNG', note: 'Image of your wall' },
+  { id: 'jpeg', label: 'JPG', note: 'Image of your wall' },
+  { id: 'pdf', label: 'PDF: render + tile spec sheet', note: 'Wall picture and tile list for quoting' },
+  { id: 'laying', label: 'PDF: laying plan', note: 'A3: which tile goes where' },
 ];
 
-// The only export that isn't generated from the design: Pretty Plastic's own
-// drawings of the TILE. Appended last, and only for products that have a pack.
-const CAD_LABEL = 'Tile CAD pack (Pretty Plastic)';
-
-// Image exports are for sharing/review; PDF/SVG/CAD keep the real-mm design data.
 const RASTER_PX_PER_MM = 1;
 const RASTER_MAX_EDGE = 2200;
 
@@ -67,29 +57,8 @@ export function ExportMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [cad, setCad] = useState<CadManifest>(new Map());
 
-  // Tiny (a few hundred bytes) and static — fetched once so the menu knows which
-  // products have a CAD pack and how big it is before the user commits to it.
-  useEffect(() => {
-    let live = true;
-    loadCadManifest().then((m) => live && setCad(m));
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  const cadPack = cad.get(ctx.product.id);
-  const formats: Array<{ id: Format; label: string; note: string }> = cadPack
-    ? [
-        ...FORMATS,
-        {
-          id: 'cad',
-          label: CAD_LABEL,
-          note: `${cadPack.files} real drawings ; DWG details, dimensions, SKP/STL/IFC (${formatMb(cadPack.bytes)})`,
-        },
-      ]
-    : FORMATS;
+  const formats = FORMATS;
 
   const scene = {
     product: ctx.product,
@@ -111,32 +80,15 @@ export function ExportMenu({
     setMsg(null);
     try {
       switch (format) {
-        case 'png': {
+        case 'png':
+        case 'jpeg': {
           const { exportRaster } = await import('../export/raster');
-          const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${format}`, {
+          const ext = format === 'jpeg' ? 'jpg' : 'png';
+          const r = await exportRaster(scene, format, RASTER_PX_PER_MM, `${name}.${ext}`, {
             legend: ctx.schedule,
             maxEdge: RASTER_MAX_EDGE,
           });
           if (r.clamped) setMsg(`Image export was capped at ${RASTER_MAX_EDGE} px on the long edge.`);
-          break;
-        }
-        case 'svg': {
-          const { buildSceneSvg } = await import('../export/svg');
-          downloadText(await buildSceneSvg(scene), `${name}.svg`, 'image/svg+xml');
-          break;
-        }
-        case 'seamless': {
-          const { exportSeamless } = await import('../export/raster');
-          const out = await exportSeamless(scene, RASTER_PX_PER_MM, `${name}_seamless.png`, {
-            maxEdge: RASTER_MAX_EDGE,
-          });
-          if (!out.ok) setMsg(out.reason ?? 'Could not create a seamless tile.');
-          else if (out.result?.clamped) setMsg(`Repeat export was capped at ${RASTER_MAX_EDGE} px on the long edge.`);
-          break;
-        }
-        case 'dxf': {
-          const { buildDxf } = await import('../export/dxf/writer');
-          downloadText(buildDxf(ctx.product, ctx.layout, ctx.cells), `${name}.dxf`, 'application/dxf');
           break;
         }
         case 'pdf': {
@@ -160,39 +112,6 @@ export function ExportMenu({
             },
             `${name}_laying-plan.pdf`,
           );
-          break;
-        }
-        case 'glb': {
-          const [{ buildWallMesh }, { buildGlb }, { downloadBlob }] = await Promise.all([
-            import('../export/mesh'),
-            import('../export/glb'),
-            import('../export/download'),
-          ]);
-          const mesh = buildWallMesh(ctx.product, ctx.layout, ctx.cells);
-          const glb = buildGlb(mesh);
-          downloadBlob(new Blob([glb], { type: 'model/gltf-binary' }), `${name}.glb`);
-          break;
-        }
-        case 'obj': {
-          const [{ buildWallMesh }, { buildObj }, { makeZip }, { downloadBlob }] = await Promise.all([
-            import('../export/mesh'),
-            import('../export/obj'),
-            import('../export/zip'),
-            import('../export/download'),
-          ]);
-          const mesh = buildWallMesh(ctx.product, ctx.layout, ctx.cells);
-          const { obj, mtl } = buildObj(mesh, `${name}.mtl`);
-          const zip = makeZip([
-            { name: `${name}.obj`, text: obj },
-            { name: `${name}.mtl`, text: mtl },
-          ]);
-          downloadBlob(zip, `${name}_obj.zip`);
-          break;
-        }
-        case 'cad': {
-          // Not generated from the design — Pretty Plastic's own tile drawings.
-          const { downloadCadPack } = await import('../export/cad');
-          await downloadCadPack(ctx.product.id, `pretty-plastic-${ctx.product.id}-cad.zip`);
           break;
         }
       }
@@ -256,11 +175,6 @@ export function ExportMenu({
               <small style={{ color: 'var(--pp-muted)' }}>{f.note}</small>
             </button>
           ))}
-          <p className="note">
-            Your WALL is exported as GLB/OBJ for 3D and DXF for 2D ; a browser can’t write .skp or
-            .rvt, and both of those import cleanly. For the TILE itself, the CAD pack carries Pretty
-            Plastic’s own SketchUp, STL, IFC and DWG files.
-          </p>
           {msg && <p className="warn">{msg}</p>}
         </div>
       )}

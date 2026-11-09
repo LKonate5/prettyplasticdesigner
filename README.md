@@ -192,31 +192,16 @@ export — still runs 100% in the browser with no server at all.
 
 ---
 
-## Exports — what's real vs. interchange
+## Exports
 
-Everything below is generated **in your browser**, client-side:
+Four downloads, generated **in your browser**:
 
 | Format | What it is |
 |---|---|
-| **PNG** | A picture of the rendered wall. |
-| **SVG** | Scalable vector of the layout, at true 1:1 mm size. |
-| **Seamless texture (PNG)** | A tileable image — one repeat of the pattern that wraps edge-to-edge, for 3D/render tools. Needs an even row count for offset patterns. |
-| **DXF (2D)** | The industry CAD interchange file. Millimetre units, one layer per colour. Opens in **AutoCAD, Revit, and SketchUp**. |
-| **PDF spec sheet** | One A4 page: the render + a tile schedule (count/% /m²/weight per colour) for quoting. |
-| **Laying plan (PDF A3)** | The legpatroon: which tile goes where. Every tile has a coordinate (column letter + course number, e.g. `F09`) and a colour code (e.g. `T2` = terracotta, medium), with cut tiles hatched, turned Second High tiles marked, a legend with counts, and a course-by-course list. Drawn to a true scale (1:5 to 1:25); a large wall is split over numbered sheets with a key plan. |
-| **3D model — GLB** | Single self-contained file: every tile extruded to its real thickness, colours baked in. Opens in **SketchUp (2021+), Blender, Windows 3D Viewer** and online glTF viewers. |
-| **3D model — OBJ + MTL** | The same 3D wall as a zipped OBJ + material file — the most universal 3D interchange (older SketchUp, Rhino, 3ds Max, MeshLab). |
-
-**SketchUp (.skp) and Revit (.rvt/.rfa)** are proprietary formats that can't be
-written from a browser — no tool can. The correct path is to **import** the
-GLB/OBJ (for 3D) or the DXF (for 2D); all of them open cleanly in SketchUp and
-Revit.
-
-The 3D model extrudes each tile's visible footprint to its true depth (First
-One 29 mm, Second High 67 mm, Basic Third 30 mm) with a thin joint between
-tiles. Surface relief (Second High's facets, Basic Third's bands) is shown in
-the 2D render/texture, not carved into the mesh — the mesh carries the true
-footprint, thickness and layout, which is what CAD/3D tools need.
+| **PNG** | A picture of the wall. |
+| **JPG** | The same picture as a JPG. |
+| **PDF: render + tile spec sheet** | One A4 page: the render + a tile schedule (count/%/m²/weight per colour) for quoting. |
+| **PDF: laying plan** | A3: which tile goes where. Every tile has a coordinate (column letter + course number, e.g. `F09`) and a colour code, with cut tiles hatched, a legend with counts, and a course-by-course list. Drawn to a true scale; a large wall is split over numbered sheets. |
 
 ---
 
